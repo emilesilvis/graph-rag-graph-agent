@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Ignore files related to knowledge sources
+knowledge_sources/
+
+# Secrets
+.env
+
+# Local artifacts
+.chroma/
+eval_runs/
+eval_report*.md
+graph_rag_graph_agent/eval/questions.yaml
+
+# OS metadata
+.DS_Store

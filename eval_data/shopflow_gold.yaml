@@ -1,0 +1,123 @@
+# Hand-curated gold evaluation set.
+#
+# Each question's expected answer is verifiable in BOTH the markdown wiki
+# and the graph.cypher content, so neither agent is disadvantaged by the
+# choice of knowledge source. Compact, clear ground truth for the judge.
+
+- id: gold-001
+  category: one_hop
+  question: Which team manages the Auth Service?
+  expected_answer: The Platform Team manages the Auth Service.
+  expected_entities:
+    - Platform Team
+  seed_cypher: "MATCH (:Entity {name: 'Auth Service'})-[:IS_MANAGED_BY]->(t) RETURN t.name"
+  seed_description: Auth Service IS_MANAGED_BY Platform Team
+
+- id: gold-002
+  category: one_hop
+  question: What programming language is the Payments Service implemented in?
+  expected_answer: Python.
+  expected_entities:
+    - Python
+  seed_cypher: ""
+  seed_description: Wiki says "Implemented in Python"
+
+- id: gold-003
+  category: one_hop
+  question: What does Istio facilitate in the ShopFlow platform?
+  expected_answer: Istio facilitates service-to-service communication.
+  expected_entities:
+    - service-to-service communication
+  seed_cypher: "MATCH (:Entity {name: 'Istio'})-[:FACILITATES]->(t) RETURN t.name"
+  seed_description: (Istio)-[:FACILITATES]->(service-to-service communication)
+
+- id: gold-004
+  category: multi_hop_2
+  question: Which infrastructure does the service managed by the Platform Team for authentication use?
+  expected_answer: It uses AWS, Kubernetes EKS, and Kafka.
+  expected_entities:
+    - AWS
+    - Kubernetes EKS
+    - Kafka
+  seed_cypher: |
+    MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity {name: 'Auth Service'})
+          -[:USES_INFRASTRUCTURE]->(t:Entity)
+    RETURN t.name
+  seed_description: Platform Team MANAGES Auth Service USES_INFRASTRUCTURE {AWS, Kubernetes EKS, Kafka}
+
+- id: gold-005
+  category: multi_hop_2
+  question: Who authored the ADR about the QuickCart acquisition, and what is their role?
+  expected_answer: Bob Martinez, who is a Staff SRE, authored it.
+  expected_entities:
+    - Bob Martinez
+    - Staff SRE
+  seed_cypher: |
+    MATCH (p:Entity)-[:AUTHORED|AUTHOR_OF|IS_AUTHOR_OF]->
+          (adr:Entity {name: 'ADR: QuickCart Acquisition and Integration'})
+    MATCH (p)-[:IS]->(role:Entity)
+    RETURN p.name, role.name
+  seed_description: 'Bob Martinez AUTHOR_OF "ADR: QuickCart Acquisition and Integration"; Bob Martinez IS "Staff SRE"'
+
+- id: gold-006
+  category: shared_neighbor
+  question: Which programming language is used by both the Auth Service and the PII Service?
+  expected_answer: Python is used by both.
+  expected_entities:
+    - Python
+  seed_cypher: |
+    MATCH (:Entity {name: 'Auth Service'})-->(t:Entity)<--(:Entity {name: 'PII Service'})
+    RETURN DISTINCT t.name
+  seed_description: Auth Service IS_BUILT_WITH Python; PII Service IS_DEVELOPED_IN Python (different rel types - `-->` required)
+
+- id: gold-007
+  category: aggregation_count
+  question: How many services does the Platform Team manage?
+  expected_answer: The Platform Team manages 3 services (Auth Service, GraphQL Service, PII Service).
+  expected_entities:
+    - "3"
+    - Auth Service
+    - GraphQL Service
+    - PII Service
+  seed_cypher: |
+    MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
+    RETURN count(DISTINCT s) AS count, collect(s.name) AS services
+  seed_description: Platform Team MANAGES {Auth Service, GraphQL Service, PII Service}
+
+- id: gold-008
+  category: negation
+  question: Among the services managed by the Platform Team, which ones do NOT depend on the Data Lineage Service?
+  expected_answer: The GraphQL Service and the PII Service do not depend on the Data Lineage Service.
+  expected_entities:
+    - GraphQL Service
+    - PII Service
+  seed_cypher: |
+    MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
+    WHERE NOT (s)-[:DEPENDS_ON]->(:Entity {name: 'Data Lineage Service'})
+    RETURN s.name
+  seed_description: Of Platform Team's 3 managed services, only Auth Service DEPENDS_ON Data Lineage Service
+
+- id: gold-009
+  category: multi_hop_3
+  question: What database does the service authored (developed) by Bob Martinez use for caching?
+  expected_answer: The Auth Service, developed by Bob Martinez, uses Redis for caching.
+  expected_entities:
+    - Auth Service
+    - Redis
+  seed_cypher: |
+    MATCH (:Entity {name: 'Bob Martinez'})<-[:IS_DEVELOPED_BY]-(s:Entity)
+          -[:USES_DATABASE]->(db:Entity)
+    RETURN s.name, db.name
+  seed_description: Bob Martinez IS_DEVELOPED_BY<- Auth Service USES_DATABASE Redis
+
+- id: gold-010
+  category: dependency_chain
+  question: Which services depend on the Data Lineage Service, directly or transitively?
+  expected_answer: The Auth Service and the Payments Service depend on the Data Lineage Service.
+  expected_entities:
+    - Auth Service
+    - Payments Service
+  seed_cypher: |
+    MATCH (s:Entity)-[:DEPENDS_ON*1..4]->(:Entity {name: 'Data Lineage Service'})
+    RETURN DISTINCT s.name
+  seed_description: Auth Service DEPENDS_ON Data Lineage Service; Payments Service DEPENDS_ON Data Lineage Service
