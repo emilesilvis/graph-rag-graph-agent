@@ -134,10 +134,90 @@ uv run python main.py eval
 # Run against a hand-curated gold set instead of the auto-generated one
 uv run python main.py eval -q eval_data/shopflow_gold.yaml
 
+# To promote a run + paper into a versioned snapshot for Git, see
+# "Iteration snapshots" below (new-iteration).
+
 # Spot-check either agent interactively
 uv run python main.py chat --agent rag
 uv run python main.py chat --agent graph
 ```
+
+## Iteration snapshots (paper + eval)
+
+Experiment runs produce **scratch** artifacts under `eval_runs/<run_id>.json` and
+a rendered root `eval_report.md` (see `.gitignore` — not meant as the
+long-lived source of truth). For anything you want in **version control** as a
+citable “this is the run behind the paper,” use **versioned iteration
+folders** and the `new-iteration` command.
+
+### Layout
+
+```text
+iterations/
+  v1/
+    iteration.yaml   # id, parent, run_id, question_count, summary, changes[]
+    paper.md         # paper text for that iteration
+    eval_report.md   # rendered report for that run
+    eval_run.json    # copy of eval_runs/<run_id>.json at cut time
+  v2/   ...
+  latest -> vN       # symlink to the newest iteration
+paper.md              # at repo root: copy of iterations/latest/paper.md
+                      # (kept in sync by new-iteration; prefer not to edit
+                      # root paper.md without a matching iteration cut)
+```
+
+- **`eval_runs/*.json`** — append-only local log, **gitignored** (avoids merge
+  noise; exploratory runs are fine).
+- **`iterations/v*/`** — **tracked** when you commit: the frozen run + report +
+  paper for that version.
+
+### Cutting a new iteration
+
+1. **Prerequisites:** Chroma and Neo4j match the corpus you are evaluating; `.env`
+   has `OPENAI_API_KEY` and Neo4j settings. Neo4j must be reachable (the graph
+   side of the eval will fail otherwise).
+2. **Run the eval** from the **project root**, then copy the **run id** from the
+   printed `Raw results: .../eval_runs/<run_id>.json` line — the id must match
+   that file exactly.
+   ```bash
+   uv run python main.py eval -q eval_data/shopflow_gold.yaml
+   ```
+3. **Update the paper** for the *next* version: read `eval_report.md` and carry
+   through overall scores, the category table, mean/p95 latency, and
+   discussion — figures in `paper.md` should match the run, not a prior run. Add
+   a `## Changelog (vN)` at the top (one bullet per change, similar to
+   `iteration.yaml`’s `changes` list) and keep claims within the study’s
+   design (e.g. asymmetric RAG vs. graph ReAct limits are intentional). Save the
+   draft to **repo root** `paper.md` (or another path you pass in the next
+   step).
+4. **Freeze the iteration** with the next `vN` id (do not create
+   `iterations/vN/` by hand; `new-iteration` creates the directory and
+   `latest`). Refuses if that folder already exists.
+   ```bash
+   uv run python main.py new-iteration --id v3 --run-id <run_id> --parent v2 \
+     --from-paper paper.md \
+     --summary "One-line description of v3" \
+     --change "file or area: what changed" \
+     --change "Another bullet"
+   ```
+   - **`--from-paper paper.md`** — use when the draft to snapshot is the root
+     `paper.md`. If you omit it, the default source is the **parent
+     iteration’s** `paper.md`, which is easy to misuse after editing the root
+     file.
+   - **`--parent`** — previous version (e.g. `v2`); if omitted, the CLI uses
+     `iterations/latest`’s target when present.
+5. The command copies `paper.md` into `iterations/<id>/`, writes
+   `eval_run.json` + `eval_report.md` + `iteration.yaml`, repoints
+   `iterations/latest` → `<id>`, and copies the iteration’s `paper.md` back to
+   the root so the repo shows the current paper.
+6. **Commit** `iterations/<id>/`, `paper.md`, and any code or data changes in one
+   logical commit.
+
+If you no longer need a scratch `eval_runs/<run_id>.json` for local debugging, you
+can delete it after the cut — the citable copy lives under
+`iterations/<id>/eval_run.json`.
+
+Run `uv run python main.py new-iteration --help` for the full option list.
 
 ## Question categories
 
@@ -176,7 +256,7 @@ graph_rag_graph_agent/
     schema.py            introspect schema for the prompt
     tools.py             run_cypher (read-only + schema preflight),
                          list_relationship_types, list_entities_like,
-                         resolve_entity, neighbourhood
+                         find_rel_types_like, resolve_entity, neighbourhood
   eval/
     generate.py          sample graph + LLM-synthesise questions
     questions.yaml       generated question set (review by hand)
@@ -184,8 +264,11 @@ graph_rag_graph_agent/
     run.py               run both agents + grade + save JSON
     report.py            markdown report
 eval_data/               hand-curated gold question sets (one per corpus)
+eval_runs/               raw run JSON (gitignored; promoted via new-iteration)
+iterations/              versioned paper + eval_report + eval_run.json per cut
 knowledge_sources/       default corpus (overridable via KNOWLEDGE_DIR)
-main.py                  typer CLI
+paper.md                 landing write-up; mirror of iterations/latest/paper.md
+main.py                  typer CLI (eval, new-iteration, …)
 ```
 
 ## Safety notes
@@ -197,7 +280,9 @@ main.py                  typer CLI
   mean" suggestions so the agent self-corrects rather than looping.
 - Results are truncated to 50 rows per call so the agent can't flood its
   own context with a bad `MATCH (n) RETURN n`.
-- Both agents are hard-capped at 24 ReAct steps per question.
+- **ReAct step caps differ by design:** the RAG agent is hard-capped at **24**
+  steps per question; the graph agent is capped at **40** so multi-hop Cypher +
+  resolution can finish without hitting the guard rail on harder items.
 
 ## Costs
 
