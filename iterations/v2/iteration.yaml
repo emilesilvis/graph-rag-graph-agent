@@ -1,0 +1,14 @@
+id: v2
+created_at: 2026-04-22T15:30:45Z
+parent: v1
+run_id: 20260422T151717Z-71aee8
+agents:
+  - rag
+  - graph
+question_count: 30
+summary: "Raised graph recursion 24 to 40, added find_rel_types_like, three Cypher recipes in the prompt, expanded gold 10 to 30; eval run 20260422T151717Z-71aee8."
+changes:
+  - "graph_agent.py: recursion_limit 24 -> 40"
+  - "graph/tools.py: added find_rel_types_like"
+  - "graph_agent.py: three new few-shots + recipe prose"
+  - "eval_data/shopflow_gold.yaml: +20 questions"

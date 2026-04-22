@@ -10,6 +10,12 @@ Tools are intentionally small and composable:
                     the agent can self-correct rather than looping on
                     hallucinated vocabulary.
 - `list_relationship_types` : list every edge type that actually exists.
+- `find_rel_types_like` : rank rel types by semantic match to an English
+                    concept (e.g. "depend" -> DEPENDS_ON, RELIES_ON,
+                    IS_DEPENDENCY_OF). Essential before variable-length
+                    paths, `-[:A|B]->` unions, or `NOT EXISTS` filters on
+                    a KGGen graph where one concept often has several
+                    spellings.
 - `list_entities_like` : case-insensitive substring search over entity names.
 - `resolve_entity`      : fuzzy / ranked lookup for ambiguous phrases.
 - `neighbourhood`       : for a given entity, list outgoing + incoming rel
@@ -190,6 +196,53 @@ def build_graph_tools(config: Config | None = None) -> list[Any]:
         return ", ".join(schema.relationship_types)
 
     @tool
+    def find_rel_types_like(concept: str, limit: int = 10) -> str:
+        """Find relationship types in the schema that match a concept.
+
+        KGGen emits free-text rel types, so a single English verb often maps
+        to several edge spellings (e.g. "depend" -> DEPENDS_ON, RELIES_ON,
+        IS_DEPENDENCY_OF). Use this BEFORE writing a variable-length path,
+        a `NOT EXISTS {...}` filter, or a `-[:X|Y|Z]->` union so the query
+        doesn't silently miss edges that express the same relation under a
+        different spelling.
+
+        Matches by case-insensitive substring first, then by difflib fuzzy
+        similarity for anything missed. Returns a ranked list, highest
+        confidence first. If nothing matches, falls back to the closest
+        fuzzy matches so the agent gets a hint rather than an empty list.
+        """
+        limit = max(1, min(int(limit), 50))
+        schema = fetch_schema(config)
+        rel_types = list(schema.relationship_types)
+        if not rel_types:
+            return "(no relationship types in the current schema)"
+        needle = concept.strip().lower()
+        if not needle:
+            return "(empty concept; pass a word like 'depend' or 'manage')"
+        tokens = [t for t in re.split(r"\W+", needle) if t]
+        scored: dict[str, float] = {}
+        for rt in rel_types:
+            rt_lower = rt.lower()
+            substring_hit = False
+            for tok in tokens or [needle]:
+                if tok and tok in rt_lower:
+                    substring_hit = True
+                    break
+            ratio = difflib.SequenceMatcher(None, needle, rt_lower).ratio()
+            score = ratio + (0.5 if substring_hit else 0.0)
+            if substring_hit or ratio >= 0.5:
+                scored[rt] = max(scored.get(rt, 0.0), score)
+        if not scored:
+            for match in difflib.get_close_matches(needle, [r.lower() for r in rel_types], n=limit, cutoff=0.3):
+                for rt in rel_types:
+                    if rt.lower() == match:
+                        scored[rt] = difflib.SequenceMatcher(None, needle, match).ratio()
+        if not scored:
+            return f"No relationship types resemble '{concept}'."
+        ranked = sorted(scored.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+        return "\n".join(f"{rt}  (score={score:.2f})" for rt, score in ranked)
+
+    @tool
     def list_entities_like(pattern: str, limit: int = 20) -> str:
         """Find entity names containing `pattern` (case-insensitive).
 
@@ -315,6 +368,7 @@ def build_graph_tools(config: Config | None = None) -> list[Any]:
     return [
         run_cypher,
         list_relationship_types,
+        find_rel_types_like,
         list_entities_like,
         resolve_entity,
         neighbourhood,

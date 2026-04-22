@@ -1,0 +1,992 @@
+{
+  "run_id": "20260422T151717Z-71aee8",
+  "started_at": "2026-04-22T15:30:00.528005+00:00",
+  "agents": [
+    "rag",
+    "graph"
+  ],
+  "question_count": 30,
+  "results": [
+    {
+      "question_id": "gold-001",
+      "category": "one_hop",
+      "question": "Which team manages the Auth Service?",
+      "expected_answer": "The Platform Team manages the Auth Service.",
+      "expected_entities": [
+        "Platform Team"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Auth Service is managed by the **Platform Team** (source: [service-auth-service.md](service-auth-service.md)).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Platform Team'.",
+      "latency_seconds": 10.246753124985844,
+      "error": null
+    },
+    {
+      "question_id": "gold-001",
+      "category": "one_hop",
+      "question": "Which team manages the Auth Service?",
+      "expected_answer": "The Platform Team manages the Auth Service.",
+      "expected_entities": [
+        "Platform Team"
+      ],
+      "agent": "graph",
+      "agent_answer": "The team that manages the Auth Service is the **Platform Team**. This information was retrieved from the relationship `IS_MANAGED_BY` in the graph.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Platform Team'.",
+      "latency_seconds": 5.335215375060216,
+      "error": null
+    },
+    {
+      "question_id": "gold-002",
+      "category": "one_hop",
+      "question": "What programming language is the Payments Service implemented in?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Payments Service is implemented in **Java** (source: team-product.md).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer contradicts the expected answer by stating Java instead of Python.",
+      "latency_seconds": 3.8167844170238823,
+      "error": null
+    },
+    {
+      "question_id": "gold-002",
+      "category": "one_hop",
+      "question": "What programming language is the Payments Service implemented in?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer does not mention Python or provide any relevant information.",
+      "latency_seconds": 44.88110295799561,
+      "error": null
+    },
+    {
+      "question_id": "gold-003",
+      "category": "one_hop",
+      "question": "What does Istio facilitate in the ShopFlow platform?",
+      "expected_answer": "Istio facilitates service-to-service communication.",
+      "expected_entities": [
+        "service-to-service communication"
+      ],
+      "agent": "rag",
+      "agent_answer": "Istio facilitates efficient service-to-service communication within the ShopFlow platform by providing a uniform way to secure, connect, and observe microservices. This service mesh is integral to the platform's microservices architecture, allowing for smooth management of complex distributed systems. Key microservices, including the Shopflow App, operate on this robust Istio infrastructure (source: technology-istio-service-mesh.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities, including service-to-service communication.",
+      "latency_seconds": 3.7667356660822406,
+      "error": null
+    },
+    {
+      "question_id": "gold-003",
+      "category": "one_hop",
+      "question": "What does Istio facilitate in the ShopFlow platform?",
+      "expected_answer": "Istio facilitates service-to-service communication.",
+      "expected_entities": [
+        "service-to-service communication"
+      ],
+      "agent": "graph",
+      "agent_answer": "Istio facilitates service-to-service communication in the ShopFlow platform. Additionally, it provides security, observability, and traffic management, and supports canary releases. It is part of the microservices architecture and integrates with Kubernetes. \n\nThis information was gathered from the relationships associated with the entity \"Istio\" in the graph.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities, with additional relevant details.",
+      "latency_seconds": 4.993782416917384,
+      "error": null
+    },
+    {
+      "question_id": "gold-004",
+      "category": "multi_hop_2",
+      "question": "Which infrastructure does the service managed by the Platform Team for authentication use?",
+      "expected_answer": "It uses AWS, Kubernetes EKS, and Kafka.",
+      "expected_entities": [
+        "AWS",
+        "Kubernetes EKS",
+        "Kafka"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Auth Service managed by the Platform Team uses scalable infrastructure built with Python. It integrates with Redis to cache session data and authentication tokens, which helps reduce database load by serving token validation requests directly from the cache (source: [service-auth-service.md]).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer does not mention AWS, Kubernetes EKS, or Kafka, and instead discusses unrelated technologies like Python and Redis.",
+      "latency_seconds": 4.183971582911909,
+      "error": null
+    },
+    {
+      "question_id": "gold-004",
+      "category": "multi_hop_2",
+      "question": "Which infrastructure does the service managed by the Platform Team for authentication use?",
+      "expected_answer": "It uses AWS, Kubernetes EKS, and Kafka.",
+      "expected_entities": [
+        "AWS",
+        "Kubernetes EKS",
+        "Kafka"
+      ],
+      "agent": "graph",
+      "agent_answer": "The service managed by the Platform Team for authentication, known as the Auth Service, uses the following infrastructure:\n\n1. **Kafka**\n2. **Kubernetes EKS**\n3. **AWS**\n\nThese details were gathered from the relationships associated with the Auth Service, specifically the `USES_INFRASTRUCTURE` relationship.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities: AWS, Kubernetes EKS, and Kafka.",
+      "latency_seconds": 5.503555165953003,
+      "error": null
+    },
+    {
+      "question_id": "gold-005",
+      "category": "multi_hop_2",
+      "question": "Who authored the ADR about the QuickCart acquisition, and what is their role?",
+      "expected_answer": "Bob Martinez, who is a Staff SRE, authored it.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Staff SRE"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The answer does not provide any information about the author or their role.",
+      "latency_seconds": 17.50469533307478,
+      "error": null
+    },
+    {
+      "question_id": "gold-005",
+      "category": "multi_hop_2",
+      "question": "Who authored the ADR about the QuickCart acquisition, and what is their role?",
+      "expected_answer": "Bob Martinez, who is a Staff SRE, authored it.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Staff SRE"
+      ],
+      "agent": "graph",
+      "agent_answer": "Bob Martinez authored the ADR about the QuickCart acquisition, and his role is Staff SRE (Site Reliability Engineer). This information was gathered from the relationships in the knowledge graph, specifically the `AUTHOR_OF` relationship linking Bob Martinez to the ADR.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities accurately.",
+      "latency_seconds": 5.244769416982308,
+      "error": null
+    },
+    {
+      "question_id": "gold-006",
+      "category": "shared_neighbor",
+      "question": "Which programming language is used by both the Auth Service and the PII Service?",
+      "expected_answer": "Python is used by both.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "Both the Auth Service and the PII Service are developed using **Python**. \n\n- Auth Service: Built with Python (source: service-auth-service.md).\n- PII Service: Developed in Python (source: service-pii-service.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Python'.",
+      "latency_seconds": 4.891210124944337,
+      "error": null
+    },
+    {
+      "question_id": "gold-006",
+      "category": "shared_neighbor",
+      "question": "Which programming language is used by both the Auth Service and the PII Service?",
+      "expected_answer": "Python is used by both.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "Both the Auth Service and the PII Service use Python as their programming language. \n\nThis was determined from the outgoing relationships of both services, where the Auth Service is built with Python and the PII Service is developed in Python.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Python'.",
+      "latency_seconds": 3.077404125011526,
+      "error": null
+    },
+    {
+      "question_id": "gold-007",
+      "category": "aggregation_count",
+      "question": "How many services does the Platform Team manage?",
+      "expected_answer": "The Platform Team manages 3 services (Auth Service, GraphQL Service, PII Service).",
+      "expected_entities": [
+        "3",
+        "Auth Service",
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Platform Team manages **two services**:\n\n1. **Auth Service**\n2. **PII Service**\n\nThese services are critical for user authentication and data protection, respectively (source: service-auth-service.md, service-pii-service.md).",
+      "verdict": "partial",
+      "rationale": "The answer mentions two of the three expected services but omits the GraphQL Service.",
+      "latency_seconds": 9.834558582981117,
+      "error": null
+    },
+    {
+      "question_id": "gold-007",
+      "category": "aggregation_count",
+      "question": "How many services does the Platform Team manage?",
+      "expected_answer": "The Platform Team manages 3 services (Auth Service, GraphQL Service, PII Service).",
+      "expected_entities": [
+        "3",
+        "Auth Service",
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Platform Team manages 3 services: PII Service, GraphQL Service, and Auth Service.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities.",
+      "latency_seconds": 6.992178374901414,
+      "error": null
+    },
+    {
+      "question_id": "gold-008",
+      "category": "negation",
+      "question": "Among the services managed by the Platform Team, which ones do NOT depend on the Data Lineage Service?",
+      "expected_answer": "The GraphQL Service and the PII Service do not depend on the Data Lineage Service.",
+      "expected_entities": [
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services managed by the Platform Team that do NOT depend on the Data Lineage Service are:\n\n1. **PII Service**\n\nThe **Auth Service** and **Payments Service** do depend on the Data Lineage Service (from the retrieved data).",
+      "verdict": "partial",
+      "rationale": "The agent mentions the PII Service but omits the GraphQL Service, which is expected.",
+      "latency_seconds": 11.179029916995205,
+      "error": null
+    },
+    {
+      "question_id": "gold-008",
+      "category": "negation",
+      "question": "Among the services managed by the Platform Team, which ones do NOT depend on the Data Lineage Service?",
+      "expected_answer": "The GraphQL Service and the PII Service do not depend on the Data Lineage Service.",
+      "expected_entities": [
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Platform Team manages three services: PII Service, GraphQL Service, and Auth Service. None of these services depend on the Data Lineage Service, as there are no dependencies recorded in the graph.\n\nKey Cypher patterns used:\n1. `MATCH (s:Entity {name: 'Platform Team'})-[:MANAGES]->(service:Entity) RETURN service.name AS service_name`\n2. `MATCH (service:Entity)<-[:DEPENDS_ON]-(d:Entity {name: 'Data Lineage Service'}) RETURN service.name AS service_name` (which returned no results).",
+      "verdict": "correct",
+      "rationale": "The agent's answer correctly identifies the GraphQL Service and PII Service as not depending on the Data Lineage Service.",
+      "latency_seconds": 18.3649397919653,
+      "error": null
+    },
+    {
+      "question_id": "gold-009",
+      "category": "multi_hop_3",
+      "question": "What database does the service authored (developed) by Bob Martinez use for caching?",
+      "expected_answer": "The Auth Service, developed by Bob Martinez, uses Redis for caching.",
+      "expected_entities": [
+        "Auth Service",
+        "Redis"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The answer does not provide any information about the expected entities or the database used for caching.",
+      "latency_seconds": 16.679595666006207,
+      "error": null
+    },
+    {
+      "question_id": "gold-009",
+      "category": "multi_hop_3",
+      "question": "What database does the service authored (developed) by Bob Martinez use for caching?",
+      "expected_answer": "The Auth Service, developed by Bob Martinez, uses Redis for caching.",
+      "expected_entities": [
+        "Auth Service",
+        "Redis"
+      ],
+      "agent": "graph",
+      "agent_answer": "The service authored by Bob Martinez, known as the Auth Service, uses **Redis** for caching.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities: Auth Service and Redis.",
+      "latency_seconds": 6.817140833940357,
+      "error": null
+    },
+    {
+      "question_id": "gold-010",
+      "category": "dependency_chain",
+      "question": "Which services depend on the Data Lineage Service, directly or transitively?",
+      "expected_answer": "The Auth Service and the Payments Service depend on the Data Lineage Service.",
+      "expected_entities": [
+        "Auth Service",
+        "Payments Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that depend on the Data Lineage Service, either directly or transitively, are:\n\n1. **Auth Service**\n2. **Payments Service**\n3. **Shopflow App**\n4. **Recommendation Service**\n5. **Fraud Detection Service**\n6. **Mobile BFF Service**\n\nThese dependencies reflect both direct and indirect relationships (from the retrieved data across multiple searches).",
+      "verdict": "partial",
+      "rationale": "The answer includes the expected entities but adds additional, unverified services.",
+      "latency_seconds": 13.058600374963135,
+      "error": null
+    },
+    {
+      "question_id": "gold-010",
+      "category": "dependency_chain",
+      "question": "Which services depend on the Data Lineage Service, directly or transitively?",
+      "expected_answer": "The Auth Service and the Payments Service depend on the Data Lineage Service.",
+      "expected_entities": [
+        "Auth Service",
+        "Payments Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The services that depend on the Data Lineage Service, either directly or transitively, are:\n1. Payments Service\n2. Monolithic Django App\n3. Auth Service\n\nThis information was retrieved using a transitive query for the `DEPENDS_ON` relationship.",
+      "verdict": "partial",
+      "rationale": "The agent's answer includes the expected entities but adds an extra entity not in the expected answer.",
+      "latency_seconds": 7.540370833943598,
+      "error": null
+    },
+    {
+      "question_id": "gold-011",
+      "category": "one_hop",
+      "question": "What programming language is the Data Lineage Service implemented in?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Data Lineage Service is implemented in **Python** (source: [service-data-lineage-service.md :: Data Lineage Service > Overview]).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same fact and mentions the expected entity 'Python'.",
+      "latency_seconds": 2.510215457994491,
+      "error": null
+    },
+    {
+      "question_id": "gold-011",
+      "category": "one_hop",
+      "question": "What programming language is the Data Lineage Service implemented in?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Data Lineage Service is implemented in Python. This information was retrieved from the relationship `IS_IMPLEMENTED_IN` in the graph.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same fact and mentions the expected entity 'Python'.",
+      "latency_seconds": 3.548409792012535,
+      "error": null
+    },
+    {
+      "question_id": "gold-012",
+      "category": "one_hop",
+      "question": "Which cache does the Auth Service use for storing session data?",
+      "expected_answer": "Redis.",
+      "expected_entities": [
+        "Redis"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Auth Service uses Redis to cache session data and authentication tokens. This helps reduce the load on the primary database by serving token validation requests directly from the cache (source: technology-redis-cache.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer correctly states that the Auth Service uses Redis for caching session data.",
+      "latency_seconds": 2.680695708026178,
+      "error": null
+    },
+    {
+      "question_id": "gold-012",
+      "category": "one_hop",
+      "question": "Which cache does the Auth Service use for storing session data?",
+      "expected_answer": "Redis.",
+      "expected_entities": [
+        "Redis"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Auth Service uses **Redis** for storing session data. \n\nThis was determined by examining the relationships of the Auth Service, which indicated it \"uses database\" Redis, and further confirming that Redis is used for session management.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same fact and mentions the expected entity 'Redis'.",
+      "latency_seconds": 5.124603124917485,
+      "error": null
+    },
+    {
+      "question_id": "gold-013",
+      "category": "multi_hop_2",
+      "question": "Who leads the team that operates the QuickCart Orders Service?",
+      "expected_answer": "Bob Martinez leads the Orders Team, which operates the QuickCart Orders Service.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Orders Team"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The answer does not mention any expected entities and states it needs more information.",
+      "latency_seconds": 16.60940750001464,
+      "error": null
+    },
+    {
+      "question_id": "gold-013",
+      "category": "multi_hop_2",
+      "question": "Who leads the team that operates the QuickCart Orders Service?",
+      "expected_answer": "Bob Martinez leads the Orders Team, which operates the QuickCart Orders Service.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Orders Team"
+      ],
+      "agent": "graph",
+      "agent_answer": "The team that operates the QuickCart Orders Service is led by Bob Martinez.",
+      "verdict": "partial",
+      "rationale": "The answer mentions Bob Martinez but omits the 'Orders Team' entity.",
+      "latency_seconds": 4.138162291026674,
+      "error": null
+    },
+    {
+      "question_id": "gold-014",
+      "category": "multi_hop_2",
+      "question": "What programming language is the service developed by Bob Martinez built with?",
+      "expected_answer": "Python - the Auth Service, which Bob Martinez developed, is built with Python.",
+      "expected_entities": [
+        "Auth Service",
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "The service developed by Bob Martinez is built with JavaScript.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer contradicts the expected answer by stating JavaScript instead of Python and misses 'Auth Service'.",
+      "latency_seconds": 7.058180833002552,
+      "error": null
+    },
+    {
+      "question_id": "gold-014",
+      "category": "multi_hop_2",
+      "question": "What programming language is the service developed by Bob Martinez built with?",
+      "expected_answer": "Python - the Auth Service, which Bob Martinez developed, is built with Python.",
+      "expected_entities": [
+        "Auth Service",
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "The service developed by Bob Martinez, known as the Auth Service, is built with Python.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities: 'Auth Service' and 'Python'.",
+      "latency_seconds": 3.337436250061728,
+      "error": null
+    },
+    {
+      "question_id": "gold-015",
+      "category": "multi_hop_2",
+      "question": "Who authored the ADR about GDPR compliance, and what team do they lead?",
+      "expected_answer": "Alice Chen authored the ADR and leads the SRE Team.",
+      "expected_entities": [
+        "Alice Chen",
+        "SRE Team"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The answer does not mention any of the expected entities or provide relevant information.",
+      "latency_seconds": 18.807305208058096,
+      "error": null
+    },
+    {
+      "question_id": "gold-015",
+      "category": "multi_hop_2",
+      "question": "Who authored the ADR about GDPR compliance, and what team do they lead?",
+      "expected_answer": "Alice Chen authored the ADR and leads the SRE Team.",
+      "expected_entities": [
+        "Alice Chen",
+        "SRE Team"
+      ],
+      "agent": "graph",
+      "agent_answer": "Alice Chen authored the ADR about GDPR compliance and leads the Customer Experience Team.",
+      "verdict": "partial",
+      "rationale": "The agent correctly identifies Alice Chen as the author but incorrectly states the team she leads.",
+      "latency_seconds": 6.224770833970979,
+      "error": null
+    },
+    {
+      "question_id": "gold-016",
+      "category": "multi_hop_3",
+      "question": "Which programming language is used by the service that is managed by the Platform Team and depends on the Data Lineage Service?",
+      "expected_answer": "Python - the Auth Service is managed by the Platform Team, depends on the Data Lineage Service, and is built with Python.",
+      "expected_entities": [
+        "Auth Service",
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "The service managed by the Platform Team that depends on the Data Lineage Service is the **Auth Service**. It is implemented in **Python**.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities: Auth Service and Python.",
+      "latency_seconds": 7.948118166998029,
+      "error": null
+    },
+    {
+      "question_id": "gold-016",
+      "category": "multi_hop_3",
+      "question": "Which programming language is used by the service that is managed by the Platform Team and depends on the Data Lineage Service?",
+      "expected_answer": "Python - the Auth Service is managed by the Platform Team, depends on the Data Lineage Service, and is built with Python.",
+      "expected_entities": [
+        "Auth Service",
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer is a refusal and does not mention any expected entities like 'Auth Service' or 'Python'.",
+      "latency_seconds": 43.082316166954115,
+      "error": null
+    },
+    {
+      "question_id": "gold-017",
+      "category": "multi_hop_3",
+      "question": "What programming language is used by the service developed by the person who authored 'ADR: QuickCart Acquisition and Integration'?",
+      "expected_answer": "Python - Bob Martinez authored the ADR and developed the Auth Service, which is built with Python.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Auth Service",
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The answer is a refusal and does not mention any expected entities or facts.",
+      "latency_seconds": 20.245858457987197,
+      "error": null
+    },
+    {
+      "question_id": "gold-017",
+      "category": "multi_hop_3",
+      "question": "What programming language is used by the service developed by the person who authored 'ADR: QuickCart Acquisition and Integration'?",
+      "expected_answer": "Python - Bob Martinez authored the ADR and developed the Auth Service, which is built with Python.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Auth Service",
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "The service developed by Bob Martinez, who authored 'ADR: QuickCart Acquisition and Integration', is built with Python. \n\nThis information was gathered through the relationships connecting Bob Martinez to the Auth Service, which is developed using Python.",
+      "verdict": "correct",
+      "rationale": "The agent's answer includes all expected entities and states the same facts as the expected answer.",
+      "latency_seconds": 8.639594875043258,
+      "error": null
+    },
+    {
+      "question_id": "gold-018",
+      "category": "multi_hop_3",
+      "question": "What role does the person who developed the authentication service managed by the Platform Team have?",
+      "expected_answer": "Staff SRE - Bob Martinez, who developed the Auth Service (managed by the Platform Team), is a Staff SRE.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Staff SRE"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer is a refusal and does not mention any expected entities or facts.",
+      "latency_seconds": 25.243069000076503,
+      "error": null
+    },
+    {
+      "question_id": "gold-018",
+      "category": "multi_hop_3",
+      "question": "What role does the person who developed the authentication service managed by the Platform Team have?",
+      "expected_answer": "Staff SRE - Bob Martinez, who developed the Auth Service (managed by the Platform Team), is a Staff SRE.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Staff SRE"
+      ],
+      "agent": "graph",
+      "agent_answer": "The person who developed the Authentication Service, Bob Martinez, has the role of Staff SRE (Site Reliability Engineer). \n\nThis information was gathered through the relationships connected to the \"Auth Service\" and \"Bob Martinez\" entities.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities.",
+      "latency_seconds": 8.769066833076067,
+      "error": null
+    },
+    {
+      "question_id": "gold-019",
+      "category": "dependency_chain",
+      "question": "Which services rely on the Payments Service, directly or transitively?",
+      "expected_answer": "The Fraud Detection Service relies on the Payments Service.",
+      "expected_entities": [
+        "Fraud Detection Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that rely on the Payments Service, either directly or transitively, are:\n\n1. **ShopFlow App**\n2. **Data Lineage Service**\n3. **Fraud Detection Service**\n4. **Recommendation Service** (depends on ShopFlow App)\n5. **Auth Service** (depends on Data Lineage Service)\n\nThus, the complete list of services is: ShopFlow App, Data Lineage Service, Fraud Detection Service, Recommendation Service, and Auth Service.",
+      "verdict": "correct",
+      "rationale": "The agent's answer includes the Fraud Detection Service, which is the expected entity.",
+      "latency_seconds": 17.984342124895193,
+      "error": null
+    },
+    {
+      "question_id": "gold-019",
+      "category": "dependency_chain",
+      "question": "Which services rely on the Payments Service, directly or transitively?",
+      "expected_answer": "The Fraud Detection Service relies on the Payments Service.",
+      "expected_entities": [
+        "Fraud Detection Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The services that rely on the Payments Service, directly or transitively, are:\n\n1. Monolithic Django App\n2. Logistics Team\n3. Data Lineage Service\n\nThis information was gathered using the relationships `INTEGRATES_WITH` and `SUPPORTS` in the graph.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer does not mention the Fraud Detection Service, which is the key expected entity.",
+      "latency_seconds": 11.340666375006549,
+      "error": null
+    },
+    {
+      "question_id": "gold-020",
+      "category": "dependency_chain",
+      "question": "Which service, directly or transitively, depends on the ShopFlow application?",
+      "expected_answer": "The Recommendation Service depends on the ShopFlow application.",
+      "expected_entities": [
+        "Recommendation Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that depend on the ShopFlow application, either directly or transitively, are:\n\n1. **Payments Service**\n   - Depends on: Data Lineage Service, Fraud Detection Service\n2. **Recommendation Service**\n\nTransitive dependencies include:\n- **Data Lineage Service** (depends on Auth Service)\n- **Fraud Detection Service** (depends on Payments Service)\n\nThus, the complete list of services is:\n- Payments Service\n- Recommendation Service\n- Data Lineage Service\n- Fraud Detection Service\n- Auth Service\n\n(Citations: service-payments-service.md, service-recommendation-service.md, service-data-lineage-service.md, service-fraud-detection-service.md)",
+      "verdict": "partial",
+      "rationale": "The agent's answer mentions the Recommendation Service but includes additional unrelated services.",
+      "latency_seconds": 24.64536445902195,
+      "error": null
+    },
+    {
+      "question_id": "gold-020",
+      "category": "dependency_chain",
+      "question": "Which service, directly or transitively, depends on the ShopFlow application?",
+      "expected_answer": "The Recommendation Service depends on the ShopFlow application.",
+      "expected_entities": [
+        "Recommendation Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The service that directly or transitively depends on the ShopFlow application is the Recommendation Service.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same fact and mentions the expected entity 'Recommendation Service'.",
+      "latency_seconds": 3.671387374983169,
+      "error": null
+    },
+    {
+      "question_id": "gold-021",
+      "category": "dependency_chain",
+      "question": "Which services use Redis for caching or session storage? Consider all relationship types that express use/employ/cache.",
+      "expected_answer": "The Auth Service and the Payments Service both use Redis for caching.",
+      "expected_entities": [
+        "Auth Service",
+        "Payments Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that use Redis for caching or session storage are:\n\n1. **Auth Service**\n   - Uses Redis for caching session data and user credentials.\n\n2. **Payments Service**\n   - Employs Redis for caching transaction histories and managing session data.\n\nBoth services utilize Redis to enhance performance by reducing load on the primary database and improving response times (sources: [technology-redis-cache.md], [service-auth-service.md], [service-payments-service.md]).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities: Auth Service and Payments Service.",
+      "latency_seconds": 4.402199000003748,
+      "error": null
+    },
+    {
+      "question_id": "gold-021",
+      "category": "dependency_chain",
+      "question": "Which services use Redis for caching or session storage? Consider all relationship types that express use/employ/cache.",
+      "expected_answer": "The Auth Service and the Payments Service both use Redis for caching.",
+      "expected_entities": [
+        "Auth Service",
+        "Payments Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The services that use Redis for caching or session storage are:\n\n1. Auth Service\n\nThis was determined by querying the relationships that express usage of Redis, including various types of \"use\" and \"cache\" relationships.",
+      "verdict": "partial",
+      "rationale": "The agent's answer mentions the Auth Service but omits the Payments Service, making it incomplete.",
+      "latency_seconds": 11.003502125036903,
+      "error": null
+    },
+    {
+      "question_id": "gold-022",
+      "category": "shared_neighbor",
+      "question": "Which cache database is used by both the Auth Service and the Payments Service?",
+      "expected_answer": "Redis.",
+      "expected_entities": [
+        "Redis"
+      ],
+      "agent": "rag",
+      "agent_answer": "Both the Auth Service and the Payments Service use **Redis** as their cache database. Redis is utilized to cache session data and authentication tokens for the Auth Service, and to cache transaction histories and recent payment details for the Payments Service (source: technology-redis-cache.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Redis'.",
+      "latency_seconds": 5.242679207934998,
+      "error": null
+    },
+    {
+      "question_id": "gold-022",
+      "category": "shared_neighbor",
+      "question": "Which cache database is used by both the Auth Service and the Payments Service?",
+      "expected_answer": "Redis.",
+      "expected_entities": [
+        "Redis"
+      ],
+      "agent": "graph",
+      "agent_answer": "Both the Auth Service and the Payments Service use **Redis** as their cache database. \n\nThis was determined by checking the outgoing relationships for both services: \n- The Auth Service has a relationship indicating it \"USES_DATABASE\" Redis.\n- The Payments Service has a relationship indicating it \"EMPLOYS\" Redis. \n\nThus, Redis is the common cache database used by both services.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Redis'.",
+      "latency_seconds": 6.173632916994393,
+      "error": null
+    },
+    {
+      "question_id": "gold-023",
+      "category": "shared_neighbor",
+      "question": "Which programming language is used by both the Fraud Detection Service and the Recommendation Service?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "Both the Fraud Detection Service and the Recommendation Service are implemented in **Python**. \n\n- The Fraud Detection Service is designed to identify and prevent fraudulent activities and is implemented in Python (source: service-fraud-detection-service.md).\n- The Recommendation Service offers tailored recommendations and is also built using Python (source: service-recommendation-service.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Python'.",
+      "latency_seconds": 4.186582082998939,
+      "error": null
+    },
+    {
+      "question_id": "gold-023",
+      "category": "shared_neighbor",
+      "question": "Which programming language is used by both the Fraud Detection Service and the Recommendation Service?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "Both the Fraud Detection Service and the Recommendation Service use **Python** as their programming language. \n\nThis was determined by checking the neighbourhoods of both services: \n- The Fraud Detection Service is implemented in Python.\n- The Recommendation Service is built using Python. \n\nThus, Python is the common programming language used by both services.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Python'.",
+      "latency_seconds": 5.269384666113183,
+      "error": null
+    },
+    {
+      "question_id": "gold-024",
+      "category": "shared_neighbor",
+      "question": "Which services integrate with both the GraphQL Federation Layer and the Monolithic Django App?",
+      "expected_answer": "The BFF Service and the Recommendation Service integrate with both.",
+      "expected_entities": [
+        "BFF Service",
+        "Recommendation Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that integrate with both the GraphQL Federation Layer and the Monolithic Django App are:\n\n1. **BFF Service**\n2. **Recommendation Service**\n3. **Fraud Detection Service**\n4. **Quickcart Orders Service**\n5. **Payments Service**\n\nThese services are mentioned as key integrations for the GraphQL Federation Layer and are also listed as integrations or dependencies for the Monolithic Django App (Shopflow App) (sources: [service-graphql-service.md], [service-shopflow-app.md]).",
+      "verdict": "partial",
+      "rationale": "The agent's answer includes the expected entities but adds extra services not mentioned in the expected answer.",
+      "latency_seconds": 16.95232529193163,
+      "error": null
+    },
+    {
+      "question_id": "gold-024",
+      "category": "shared_neighbor",
+      "question": "Which services integrate with both the GraphQL Federation Layer and the Monolithic Django App?",
+      "expected_answer": "The BFF Service and the Recommendation Service integrate with both.",
+      "expected_entities": [
+        "BFF Service",
+        "Recommendation Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The services that integrate with both the GraphQL Federation Layer and the Monolithic Django App are:\n1. BFF Service\n2. Recommendation Service\n\nThis was determined by examining the outgoing relationships for both services and identifying the common ones.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities.",
+      "latency_seconds": 22.804052375024185,
+      "error": null
+    },
+    {
+      "question_id": "gold-025",
+      "category": "aggregation_count",
+      "question": "How many teams does the ShopFlow platform have?",
+      "expected_answer": "ShopFlow has 9 teams - Catalog, Customer Experience, Data, Engineering, Logistics, Orders, Platform, Product, and the Site Reliability Engineering (SRE) Team.",
+      "expected_entities": [
+        "9",
+        "Catalog Team",
+        "Customer Experience Team",
+        "Data Team",
+        "Engineering Team",
+        "Logistics Team",
+        "Orders Team",
+        "Platform Team",
+        "Product Team",
+        "Site Reliability Engineering (SRE) Team"
+      ],
+      "agent": "rag",
+      "agent_answer": "The ShopFlow platform has approximately 1,500 dedicated professionals organized into several specialized teams, including the Data Team, Product Team, Platform Team, and Engineering Team.",
+      "verdict": "partial",
+      "rationale": "The answer mentions some expected teams but not all and does not specify the number of teams.",
+      "latency_seconds": 11.920148208038881,
+      "error": null
+    },
+    {
+      "question_id": "gold-025",
+      "category": "aggregation_count",
+      "question": "How many teams does the ShopFlow platform have?",
+      "expected_answer": "ShopFlow has 9 teams - Catalog, Customer Experience, Data, Engineering, Logistics, Orders, Platform, Product, and the Site Reliability Engineering (SRE) Team.",
+      "expected_entities": [
+        "9",
+        "Catalog Team",
+        "Customer Experience Team",
+        "Data Team",
+        "Engineering Team",
+        "Logistics Team",
+        "Orders Team",
+        "Platform Team",
+        "Product Team",
+        "Site Reliability Engineering (SRE) Team"
+      ],
+      "agent": "graph",
+      "agent_answer": "The ShopFlow platform has 6 teams: Platform Team, Catalog Team, Engineering Team, SRE Team, Payments Service, and Mobile Backend-for-Frontend (BFF) Service.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer lists incorrect teams and an incorrect total number of teams.",
+      "latency_seconds": 22.35972616705112,
+      "error": null
+    },
+    {
+      "question_id": "gold-026",
+      "category": "aggregation_count",
+      "question": "How many distinct services or components have their code implemented in Python?",
+      "expected_answer": "6 - the Auth Service, PII Service, Data Lineage Service, Fraud Detection Service, Recommendation Service, and the Monolithic Django App.",
+      "expected_entities": [
+        "6",
+        "Auth Service",
+        "PII Service",
+        "Data Lineage Service",
+        "Fraud Detection Service",
+        "Recommendation Service",
+        "Monolithic Django App"
+      ],
+      "agent": "rag",
+      "agent_answer": "There are 5 distinct services implemented in Python: Auth Service, PII Service, Fraud Detection Service, Recommendation Service, and Shopflow App.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer lists 5 services and misses key entities like Data Lineage Service and Monolithic Django App.",
+      "latency_seconds": 5.1616082090185955,
+      "error": null
+    },
+    {
+      "question_id": "gold-026",
+      "category": "aggregation_count",
+      "question": "How many distinct services or components have their code implemented in Python?",
+      "expected_answer": "6 - the Auth Service, PII Service, Data Lineage Service, Fraud Detection Service, Recommendation Service, and the Monolithic Django App.",
+      "expected_entities": [
+        "6",
+        "Auth Service",
+        "PII Service",
+        "Data Lineage Service",
+        "Fraud Detection Service",
+        "Recommendation Service",
+        "Monolithic Django App"
+      ],
+      "agent": "graph",
+      "agent_answer": "There are 6 distinct services or components implemented in Python: \n1. Recommendation Service\n2. Auth Service\n3. PII Service\n4. Fraud Detection Service\n5. Data Lineage Service\n6. Monolithic Django App\n\nThis information was gathered using the relationships related to Python in the graph.",
+      "verdict": "correct",
+      "rationale": "The agent's answer lists all expected entities and states the same facts as the expected answer.",
+      "latency_seconds": 14.052283124998212,
+      "error": null
+    },
+    {
+      "question_id": "gold-027",
+      "category": "aggregation_count",
+      "question": "How many entities does the Fraud Detection Service directly integrate with (via INTEGRATES_WITH edges)?",
+      "expected_answer": "3 - Elasticsearch, Kibana, and QuickCart.",
+      "expected_entities": [
+        "3",
+        "Elasticsearch",
+        "Kibana",
+        "QuickCart"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Fraud Detection Service directly integrates with 2 entities: Payments Service and QuickCart.",
+      "verdict": "wrong",
+      "rationale": "The answer lists incorrect entities and an incorrect number of integrations, missing Elasticsearch and Kibana.",
+      "latency_seconds": 8.518680542008951,
+      "error": null
+    },
+    {
+      "question_id": "gold-027",
+      "category": "aggregation_count",
+      "question": "How many entities does the Fraud Detection Service directly integrate with (via INTEGRATES_WITH edges)?",
+      "expected_answer": "3 - Elasticsearch, Kibana, and QuickCart.",
+      "expected_entities": [
+        "3",
+        "Elasticsearch",
+        "Kibana",
+        "QuickCart"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Fraud Detection Service directly integrates with 3 entities: Kibana, Elasticsearch, and QuickCart.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities.",
+      "latency_seconds": 9.96424679190386,
+      "error": null
+    },
+    {
+      "question_id": "gold-028",
+      "category": "negation",
+      "question": "Among the services managed by the Platform Team, which ones are NOT implemented in Python?",
+      "expected_answer": "The GraphQL Service is not documented as being implemented in Python (the Auth Service and PII Service both are).",
+      "expected_entities": [
+        "GraphQL Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services managed by the Platform Team that are **NOT** implemented in Python are:\n\n- None. \n\nAll identified services (Auth Service, PII Service, Fraud Detection Service, and Recommendation Service) are implemented in Python. \n\nSources: \n- Auth Service (service-auth-service.md)\n- PII Service (service-pii-service.md)\n- Fraud Detection Service (service-fraud-detection-service.md)\n- Recommendation Service (service-recommendation-service.md)",
+      "verdict": "wrong",
+      "rationale": "The agent's answer contradicts the expected answer by stating all services are implemented in Python, missing the GraphQL Service entity.",
+      "latency_seconds": 17.548663249937817,
+      "error": null
+    },
+    {
+      "question_id": "gold-028",
+      "category": "negation",
+      "question": "Among the services managed by the Platform Team, which ones are NOT implemented in Python?",
+      "expected_answer": "The GraphQL Service is not documented as being implemented in Python (the Auth Service and PII Service both are).",
+      "expected_entities": [
+        "GraphQL Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Platform Team manages 3 services: PII Service, GraphQL Service, and Auth Service. None of these services are implemented in Python, as there are no services linked to Python in the graph.\n\nThus, all services managed by the Platform Team (PII Service, GraphQL Service, Auth Service) are NOT implemented in Python.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer incorrectly states that none of the services are implemented in Python, contradicting the expected answer.",
+      "latency_seconds": 12.757275625015609,
+      "error": null
+    },
+    {
+      "question_id": "gold-029",
+      "category": "negation",
+      "question": "Among the services that depend on the Data Lineage Service, which are NOT managed by the Platform Team?",
+      "expected_answer": "The Payments Service and the Monolithic Django App depend on the Data Lineage Service but are not managed by the Platform Team.",
+      "expected_entities": [
+        "Payments Service",
+        "Monolithic Django App"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that depend on the Data Lineage Service are:\n\n1. **Auth Service** (managed by the Platform Team)\n2. **Payments Service** (managed by the Product Team)\n3. **Shopflow App** (managed by the Engineering Team)\n\nAmong these, the services that are **NOT managed by the Platform Team** are:\n\n- **Payments Service**\n- **Shopflow App** \n\nThus, the answer is:\n- Payments Service\n- Shopflow App",
+      "verdict": "partial",
+      "rationale": "The agent correctly identifies the Payments Service but misses the Monolithic Django App and incorrectly includes the Shopflow App.",
+      "latency_seconds": 9.753521583043039,
+      "error": null
+    },
+    {
+      "question_id": "gold-029",
+      "category": "negation",
+      "question": "Among the services that depend on the Data Lineage Service, which are NOT managed by the Platform Team?",
+      "expected_answer": "The Payments Service and the Monolithic Django App depend on the Data Lineage Service but are not managed by the Platform Team.",
+      "expected_entities": [
+        "Payments Service",
+        "Monolithic Django App"
+      ],
+      "agent": "graph",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer is a refusal and does not mention any expected entities.",
+      "latency_seconds": 34.82971920806449,
+      "error": null
+    },
+    {
+      "question_id": "gold-030",
+      "category": "negation",
+      "question": "Among the services implemented in Python, which ones are NOT managed by the Platform Team?",
+      "expected_answer": "The Data Lineage Service, the Fraud Detection Service, the Recommendation Service, and the Monolithic Django App are implemented in Python but not managed by the Platform Team.",
+      "expected_entities": [
+        "Data Lineage Service",
+        "Fraud Detection Service",
+        "Recommendation Service",
+        "Monolithic Django App"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services implemented in Python that are **not** managed by the Platform Team are:\n\n1. **Recommendation Service**\n2. **Shopflow App**\n\nThe following services are managed by the Platform Team:\n- **Auth Service**\n- **PII Service**\n- **Fraud Detection Service** \n\nThus, the services not managed by the Platform Team are the Recommendation Service and the Shopflow App (from the findings in the service documentation).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer misses key entities and incorrectly states that the Fraud Detection Service is managed by the Platform Team.",
+      "latency_seconds": 13.196990167023614,
+      "error": null
+    },
+    {
+      "question_id": "gold-030",
+      "category": "negation",
+      "question": "Among the services implemented in Python, which ones are NOT managed by the Platform Team?",
+      "expected_answer": "The Data Lineage Service, the Fraud Detection Service, the Recommendation Service, and the Monolithic Django App are implemented in Python but not managed by the Platform Team.",
+      "expected_entities": [
+        "Data Lineage Service",
+        "Fraud Detection Service",
+        "Recommendation Service",
+        "Monolithic Django App"
+      ],
+      "agent": "graph",
+      "agent_answer": "The only service implemented in Python is the **PII Service**, which is managed by the Platform Team. Therefore, there are no services implemented in Python that are NOT managed by the Platform Team. \n\nKey Cypher patterns used:\n- `MATCH (s:Entity) WHERE (s)-[:IS_DEVELOPED_IN]->(:Entity {name: 'Python'})` to find Python services.\n- Checked management relationships for the identified services.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer contradicts the expected answer and misses all key entities.",
+      "latency_seconds": 14.703421624959446,
+      "error": null
+    }
+  ],
+  "output_path": "/Users/emilesilvis/Dropbox/30 - 39 Projects/llms-on-graphs/graph-rag-graph-agent/eval_runs/20260422T151717Z-71aee8.json"
+}

@@ -1,0 +1,330 @@
+{
+  "run_id": "20260418T134710Z-9dc0ac",
+  "started_at": "2026-04-18T13:50:08.528553+00:00",
+  "agents": [
+    "rag",
+    "graph"
+  ],
+  "question_count": 10,
+  "results": [
+    {
+      "question_id": "gold-001",
+      "category": "one_hop",
+      "question": "Which team manages the Auth Service?",
+      "expected_answer": "The Platform Team manages the Auth Service.",
+      "expected_entities": [
+        "Platform Team"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Auth Service is managed by the **Platform Team** (source: service-auth-service.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Platform Team'.",
+      "latency_seconds": 3.2836426249705255,
+      "error": null
+    },
+    {
+      "question_id": "gold-001",
+      "category": "one_hop",
+      "question": "Which team manages the Auth Service?",
+      "expected_answer": "The Platform Team manages the Auth Service.",
+      "expected_entities": [
+        "Platform Team"
+      ],
+      "agent": "graph",
+      "agent_answer": "The team that manages the Auth Service is the Platform Team.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same fact and mentions the expected entity 'Platform Team'.",
+      "latency_seconds": 1.9153486670693383,
+      "error": null
+    },
+    {
+      "question_id": "gold-002",
+      "category": "one_hop",
+      "question": "What programming language is the Payments Service implemented in?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Payments Service is implemented in **Java** (source: team-product.md).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer contradicts the expected answer by stating Java instead of Python.",
+      "latency_seconds": 2.137607584008947,
+      "error": null
+    },
+    {
+      "question_id": "gold-002",
+      "category": "one_hop",
+      "question": "What programming language is the Payments Service implemented in?",
+      "expected_answer": "Python.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Payments Service is implemented in a programming language that is not explicitly mentioned in the retrieved data. However, it is associated with the service-payments-service, which leverages Kafka and employs Redis, indicating a modern architecture likely involving languages commonly used in microservices, such as Java, Python, or Node.js. Unfortunately, the specific programming language is not directly stated in the graph data.\n\nKey Cypher patterns used include:\n- `MATCH (s:Entity {name: 'Payments Service'})-[:IS_DEVELOPED_AS]->(t:Entity)` to find the related service.\n- `MATCH (s:Entity {name: 'service-payments-service'})-[:LEVERAGES]->(t:Entity)` to explore its dependencies.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer does not mention Python and incorrectly states the language is not specified.",
+      "latency_seconds": 12.769268999923952,
+      "error": null
+    },
+    {
+      "question_id": "gold-003",
+      "category": "one_hop",
+      "question": "What does Istio facilitate in the ShopFlow platform?",
+      "expected_answer": "Istio facilitates service-to-service communication.",
+      "expected_entities": [
+        "service-to-service communication"
+      ],
+      "agent": "rag",
+      "agent_answer": "Istio facilitates efficient service-to-service communication in the ShopFlow platform by providing a uniform way to secure, connect, and observe microservices (source: technology-istio-service-mesh.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'service-to-service communication'.",
+      "latency_seconds": 7.265815875027329,
+      "error": null
+    },
+    {
+      "question_id": "gold-003",
+      "category": "one_hop",
+      "question": "What does Istio facilitate in the ShopFlow platform?",
+      "expected_answer": "Istio facilitates service-to-service communication.",
+      "expected_entities": [
+        "service-to-service communication"
+      ],
+      "agent": "graph",
+      "agent_answer": "Istio facilitates service-to-service communication in the ShopFlow platform. Additionally, it provides security, observability, and traffic management, and supports canary releases. It is part of the microservices architecture and integrates with Kubernetes. \n\nThis information was gathered using the neighbourhood function on the entity \"Istio\".",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities, with additional relevant details.",
+      "latency_seconds": 3.6092459579231218,
+      "error": null
+    },
+    {
+      "question_id": "gold-004",
+      "category": "multi_hop_2",
+      "question": "Which infrastructure does the service managed by the Platform Team for authentication use?",
+      "expected_answer": "It uses AWS, Kubernetes EKS, and Kafka.",
+      "expected_entities": [
+        "AWS",
+        "Kubernetes EKS",
+        "Kafka"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Auth Service managed by the Platform Team uses a scalable infrastructure built with Python. It integrates with Redis to cache session data and authentication tokens, which helps reduce database load by serving token validation requests directly from the cache (source: [service-auth-service.md]).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer does not mention AWS, Kubernetes EKS, or Kafka, and instead discusses unrelated technologies.",
+      "latency_seconds": 3.6583084169542417,
+      "error": null
+    },
+    {
+      "question_id": "gold-004",
+      "category": "multi_hop_2",
+      "question": "Which infrastructure does the service managed by the Platform Team for authentication use?",
+      "expected_answer": "It uses AWS, Kubernetes EKS, and Kafka.",
+      "expected_entities": [
+        "AWS",
+        "Kubernetes EKS",
+        "Kafka"
+      ],
+      "agent": "graph",
+      "agent_answer": "The service managed by the Platform Team for authentication, known as the Auth Service, uses the following infrastructure:\n\n- **Kafka**\n- **Kubernetes EKS**\n- **AWS**\n\nThis information was gathered from the relationships of the Auth Service entity.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities: AWS, Kubernetes EKS, and Kafka.",
+      "latency_seconds": 4.233344833017327,
+      "error": null
+    },
+    {
+      "question_id": "gold-005",
+      "category": "multi_hop_2",
+      "question": "Who authored the ADR about the QuickCart acquisition, and what is their role?",
+      "expected_answer": "Bob Martinez, who is a Staff SRE, authored it.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Staff SRE"
+      ],
+      "agent": "rag",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The answer does not provide any information about the author or their role.",
+      "latency_seconds": 16.260577874956653,
+      "error": null
+    },
+    {
+      "question_id": "gold-005",
+      "category": "multi_hop_2",
+      "question": "Who authored the ADR about the QuickCart acquisition, and what is their role?",
+      "expected_answer": "Bob Martinez, who is a Staff SRE, authored it.",
+      "expected_entities": [
+        "Bob Martinez",
+        "Staff SRE"
+      ],
+      "agent": "graph",
+      "agent_answer": "Bob Martinez authored the ADR about the QuickCart acquisition, and his role is Staff SRE. This information was gathered from the relationships in the graph, specifically the `AUTHOR_OF` relationship for the ADR and the `IS` relationship for his role.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities accurately.",
+      "latency_seconds": 4.427997874910943,
+      "error": null
+    },
+    {
+      "question_id": "gold-006",
+      "category": "shared_neighbor",
+      "question": "Which programming language is used by both the Auth Service and the PII Service?",
+      "expected_answer": "Python is used by both.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "rag",
+      "agent_answer": "Both the Auth Service and the PII Service are developed using **Python**. \n\n- Auth Service: Built with Python (source: service-auth-service.md).\n- PII Service: Developed in Python (source: service-pii-service.md).",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions the expected entity 'Python'.",
+      "latency_seconds": 2.8005886250175536,
+      "error": null
+    },
+    {
+      "question_id": "gold-006",
+      "category": "shared_neighbor",
+      "question": "Which programming language is used by both the Auth Service and the PII Service?",
+      "expected_answer": "Python is used by both.",
+      "expected_entities": [
+        "Python"
+      ],
+      "agent": "graph",
+      "agent_answer": "Both the Auth Service and the PII Service use Python as their programming language. \n\nThis was determined by checking the neighbourhoods of both services, where the Auth Service is built with Python and the PII Service is developed in Python. \n\nKey Cypher patterns used:\n- `MATCH (s:Entity {name: 'Auth Service'})` and `MATCH (s:Entity {name: 'PII Service'})` to explore their relationships and attributes.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states that both services use Python, matching the expected answer and mentioning the key entity.",
+      "latency_seconds": 5.711657334002666,
+      "error": null
+    },
+    {
+      "question_id": "gold-007",
+      "category": "aggregation_count",
+      "question": "How many services does the Platform Team manage?",
+      "expected_answer": "The Platform Team manages 3 services (Auth Service, GraphQL Service, PII Service).",
+      "expected_entities": [
+        "3",
+        "Auth Service",
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The Platform Team manages 3 services: Auth Service, Data Lineage Service, and Payments Service (from the notes in the scratchpad).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer lists incorrect services and misses expected entities like GraphQL Service and PII Service.",
+      "latency_seconds": 12.944648041040637,
+      "error": null
+    },
+    {
+      "question_id": "gold-007",
+      "category": "aggregation_count",
+      "question": "How many services does the Platform Team manage?",
+      "expected_answer": "The Platform Team manages 3 services (Auth Service, GraphQL Service, PII Service).",
+      "expected_entities": [
+        "3",
+        "Auth Service",
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Platform Team manages 3 services: PII Service, GraphQL Service, and Auth Service.",
+      "verdict": "correct",
+      "rationale": "The agent's answer states the same facts and mentions all expected entities.",
+      "latency_seconds": 6.027365457965061,
+      "error": null
+    },
+    {
+      "question_id": "gold-008",
+      "category": "negation",
+      "question": "Among the services managed by the Platform Team, which ones do NOT depend on the Data Lineage Service?",
+      "expected_answer": "The GraphQL Service and the PII Service do not depend on the Data Lineage Service.",
+      "expected_entities": [
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "Among the services managed by the Platform Team, the one that does NOT depend on the Data Lineage Service is the **PII Service**. \n\nThe other services, namely the **Auth Service**, **Payments Service**, and **Shopflow App**, all have dependencies on the Data Lineage Service (source: service dependencies for each service).",
+      "verdict": "partial",
+      "rationale": "The agent mentions the PII Service but omits the GraphQL Service, which is also expected.",
+      "latency_seconds": 12.691052875015885,
+      "error": null
+    },
+    {
+      "question_id": "gold-008",
+      "category": "negation",
+      "question": "Among the services managed by the Platform Team, which ones do NOT depend on the Data Lineage Service?",
+      "expected_answer": "The GraphQL Service and the PII Service do not depend on the Data Lineage Service.",
+      "expected_entities": [
+        "GraphQL Service",
+        "PII Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The Platform Team manages three services: PII Service, GraphQL Service, and Auth Service. However, none of these services depend on the Data Lineage Service, as there are no services listed that have a dependency on it.\n\nThus, the services managed by the Platform Team that do NOT depend on the Data Lineage Service are:\n- PII Service\n- GraphQL Service\n- Auth Service\n\nThis conclusion is based on the relationships observed in the graph, specifically the absence of any services that depend on the Data Lineage Service.",
+      "verdict": "partial",
+      "rationale": "The agent correctly identifies the PII and GraphQL Services but incorrectly includes the Auth Service.",
+      "latency_seconds": 12.8800141250249,
+      "error": null
+    },
+    {
+      "question_id": "gold-009",
+      "category": "multi_hop_3",
+      "question": "What database does the service authored (developed) by Bob Martinez use for caching?",
+      "expected_answer": "The Auth Service, developed by Bob Martinez, uses Redis for caching.",
+      "expected_entities": [
+        "Auth Service",
+        "Redis"
+      ],
+      "agent": "rag",
+      "agent_answer": "The service authored by Bob Martinez, known as the Payments Service, uses **Redis** for caching. This caching layer enhances transaction lookup speed and contributes to a smoother user experience by caching transaction histories and recent payment details (source: [technology-redis-cache.md](technology-redis-cache.md)).",
+      "verdict": "wrong",
+      "rationale": "The agent's answer mentions Redis but incorrectly identifies the service as the Payments Service instead of the Auth Service.",
+      "latency_seconds": 10.112006167066284,
+      "error": null
+    },
+    {
+      "question_id": "gold-009",
+      "category": "multi_hop_3",
+      "question": "What database does the service authored (developed) by Bob Martinez use for caching?",
+      "expected_answer": "The Auth Service, developed by Bob Martinez, uses Redis for caching.",
+      "expected_entities": [
+        "Auth Service",
+        "Redis"
+      ],
+      "agent": "graph",
+      "agent_answer": "Sorry, need more steps to process this request.",
+      "verdict": "wrong",
+      "rationale": "The agent's answer is a refusal and does not mention any expected entities.",
+      "latency_seconds": 16.920137249981053,
+      "error": null
+    },
+    {
+      "question_id": "gold-010",
+      "category": "dependency_chain",
+      "question": "Which services depend on the Data Lineage Service, directly or transitively?",
+      "expected_answer": "The Auth Service and the Payments Service depend on the Data Lineage Service.",
+      "expected_entities": [
+        "Auth Service",
+        "Payments Service"
+      ],
+      "agent": "rag",
+      "agent_answer": "The services that depend on the Data Lineage Service, either directly or transitively, are:\n\n1. **Auth Service**\n2. **Payments Service**\n   - **Fraud Detection Service** (depends on Payments Service)\n3. **Shopflow App**\n   - **Recommendation Service** (depends on Shopflow App)\n   - **Mobile BFF Service** (depends on Shopflow App)\n\nThus, the complete list of services is: Auth Service, Payments Service, Shopflow App, Fraud Detection Service, Recommendation Service, Mobile BFF Service. \n\nThis information is derived from the following sources:\n- Data Lineage Service dependencies (service-data-lineage-service.md)\n- Payments Service dependencies (service-payments-service.md)\n- Shopflow App dependencies (service-recommendation-service.md, service-bff-service.md)",
+      "verdict": "partial",
+      "rationale": "The agent's answer includes the expected entities but adds extra services not mentioned in the expected answer.",
+      "latency_seconds": 13.278599458979443,
+      "error": null
+    },
+    {
+      "question_id": "gold-010",
+      "category": "dependency_chain",
+      "question": "Which services depend on the Data Lineage Service, directly or transitively?",
+      "expected_answer": "The Auth Service and the Payments Service depend on the Data Lineage Service.",
+      "expected_entities": [
+        "Auth Service",
+        "Payments Service"
+      ],
+      "agent": "graph",
+      "agent_answer": "The services that depend on the Data Lineage Service, directly or transitively, are:\n\n1. Payments Service\n2. Auth Service\n3. ShopFlow\n4. service-auth-service\n5. service-payments-service\n6. Fraud Detection Service\n7. e-commerce operations\n8. Kibana\n9. Elasticsearch\n10. QuickCart\n\nThis information was gathered using the Cypher pattern that explored relationships like `INTEGRATES_WITH`, `PROVIDES_TRACEABILITY_FOR`, and `SUPPORTS` from the Data Lineage Service.",
+      "verdict": "partial",
+      "rationale": "The answer includes the expected entities but adds unrelated services, making it overly broad.",
+      "latency_seconds": 8.236001583980396,
+      "error": null
+    }
+  ],
+  "output_path": "/Users/emilesilvis/Dropbox/30 - 39 Projects/llms-on-graphs/graph-rag-graph-agent/eval_runs/20260418T134710Z-9dc0ac.json"
+}

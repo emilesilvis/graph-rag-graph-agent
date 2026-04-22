@@ -28,9 +28,19 @@ Cypher:
   MATCH (s:Entity {name: '<SUBJECT>'})-[:<REL_TYPE>]->(t:Entity)
   RETURN t.name AS result
 
-Q: Which entities reach X transitively (1-4 hops, any relationship)?
+Q: Which entities reach X transitively via a relationship-family F
+   (e.g. all the "depends-on" / "relies-on" spellings KGGen emitted)?
+  # Transitive-closure recipe:
+  # STEP 1: call `find_rel_types_like('<verb>')` to get every rel-type
+  #   spelling that expresses the concept - e.g. "depend" may surface
+  #   DEPENDS_ON, RELIES_ON, IS_DEPENDENCY_OF. Never use bare
+  #   `-[*1..N]->` without a rel-type union: it will pull in teams,
+  #   infrastructure, documents and other noise and produce a wrong
+  #   answer with high confidence.
+  # STEP 2: write the variable-length pattern with the FULL union of
+  #   matching rel types:
 Cypher:
-  MATCH (s:Entity)-[*1..4]->(:Entity {name: '<TARGET>'})
+  MATCH (s:Entity)-[:<REL_A>|<REL_B>|<REL_C>*1..4]->(:Entity {name: '<TARGET>'})
   RETURN DISTINCT s.name AS reaches
 
 Q: Which entities are connected to both X and Y (shared neighbour)?
@@ -45,14 +55,36 @@ Cypher:
   MATCH (:Entity {name: '<SUBJECT>'})-[:<REL_TYPE>]->(t:Entity)
   RETURN count(DISTINCT t) AS count
 
-Q: Which entities do NOT have relationship R to X?
-  # Use a candidate pool (entities that themselves participate in the graph)
-  # to avoid enumerating every leaf node.
+Q: Which X do NOT have relationship R to Y?
+  # Negation-as-set-subtraction recipe (prefer this over a single
+  # `NOT EXISTS { -[:REL_TYPE]-> }` filter when the graph has noisy,
+  # KGGen-style synonymous rel types, because one-spelling NOT EXISTS
+  # silently returns all candidates when the spelling is wrong):
+  # STEP 1: compute the positive candidate set (all X).
+  # STEP 2: INDEPENDENTLY compute the "exclude" set from Y's side
+  #   using `neighbourhood('<Y>')` incoming, OR a Cypher query that
+  #   unions every rel-type spelling returned by
+  #   `find_rel_types_like('<verb>')`. Stash the set in the scratchpad.
+  # STEP 3: subtract:
 Cypher:
-  MATCH (s:Entity)-->()
-  WITH DISTINCT s
-  WHERE NOT (s)-[:<REL_TYPE>]->(:Entity {name: '<TARGET>'})
-  RETURN s.name AS negative ORDER BY s.name LIMIT 20
+  MATCH (<candidate pattern>)
+  WITH <candidate>.name AS name
+  WHERE NOT name IN [<names from step 2, comma-separated single-quoted>]
+  RETURN name
+
+Q: A 3-hop question like "what <attr> does the <X> <verbed-by> <PERSON> have?"
+  # 3-hop decomposition recipe. Do NOT write one mega-MATCH; the rel-type
+  # vocabulary is too noisy for that to succeed in one shot.
+  # STEP 1: resolve the middle entity with one query, stash its name:
+  #   MATCH (:Entity {name: '<PERSON>'})<-[r]-(m:Entity)
+  #   WHERE type(r) IN ['<REL_A>', '<REL_B>']  // from find_rel_types_like
+  #   RETURN m.name
+  #   -> `scratchpad_write("middle_entity", "<name>")`
+  # STEP 2: query from the middle entity to the final attribute, using
+  #   `neighbourhood(<name>)` first if you don't know which rel type
+  #   carries the attribute:
+  #   MATCH (:Entity {name: '<middle>'})-[:<REL_C>]->(t:Entity)
+  #   RETURN t.name
 """
 
 
@@ -78,8 +110,27 @@ Schema-first workflow (important - do this before guessing Cypher):
    that first comes to mind. Do NOT guess rel type names from English
    verbs in the question ("authored", "implements", "manages") - ask the
    graph.
-3. Then write your Cypher, using the rel types and directions you just
+3. When the question's verb might map to several spellings (common for
+   KGGen-extracted graphs - e.g. "depends on" might surface as
+   DEPENDS_ON, RELIES_ON, IS_DEPENDENCY_OF), call
+   `find_rel_types_like('<verb>')` and use the FULL union of returned
+   rel types in your Cypher. This matters most for variable-length
+   paths, `NOT EXISTS` filters, and anything transitive.
+4. Then write your Cypher, using the rel types and directions you just
    observed.
+
+Question-shape triggers (which recipe applies):
+- "Which X reach/depend-on/... Y directly or transitively?" -> use the
+  transitive-closure recipe (few-shot below): `find_rel_types_like`
+  first, then variable-length Cypher with the FULL rel-type union.
+- "Which X do NOT <verb> Y?" -> use the negation-as-set-subtraction
+  recipe (few-shot below). Do not rely on a single-spelling
+  `NOT EXISTS` filter - it can silently match nothing and hand back
+  every candidate.
+- Questions that chain 3 or more entities (e.g. "what <attr> does the
+  <X> <verbed-by> <PERSON> have?") -> use the 3-hop decomposition
+  recipe (few-shot below): resolve the middle entity in one Cypher
+  call, stash it in the scratchpad, then query from there.
 
 Query-writing rules:
 - Entity names are case-sensitive and must match exactly. If Cypher
@@ -93,13 +144,15 @@ Query-writing rules:
   `-[:REL_A|REL_B*1..4]->`. ALWAYS constrain the rel types on
   variable-length paths - bare `-[*1..4]->` picks up teams,
   infrastructure, documents and noise, turning a clean answer into a
-  dozen unrelated entities.
+  dozen unrelated entities. Populate the rel-type union from
+  `find_rel_types_like(<verb>)`, not from a guess.
 - When `run_cypher` returns NOTE lines warning that a rel type or
   property does not exist, TRUST them and rewrite the query using the
   suggested alternatives - don't keep re-submitting minor variants of
   the same wrong vocabulary.
 - Use the scratchpad tools to stash intermediate results (e.g. a set of
-  candidate entity names) while working through complex questions.
+  candidate entity names, or the middle entity in a decomposed 3-hop
+  query) while working through complex questions.
 - When a result set is larger than ~10 rows, SUMMARISE it rather than
   dumping every row, unless the question specifically asks to
   enumerate.
@@ -140,8 +193,12 @@ class GraphAgent:
             config={
                 "configurable": {"thread_id": thread_id},
                 # Hard cap on ReAct steps so the agent can't loop forever on
-                # a pathological question.
-                "recursion_limit": 24,
+                # a pathological question. 3-hop questions legitimately need
+                # more than 24 steps once you account for entity-resolution
+                # plus neighbourhood-inspection plus two or three Cypher
+                # iterations; 40 preserves the runaway-loop guard while
+                # giving multi-hop reasoning room to breathe.
+                "recursion_limit": 40,
             },
         )
         messages = result["messages"]

@@ -121,3 +121,300 @@
     MATCH (s:Entity)-[:DEPENDS_ON*1..4]->(:Entity {name: 'Data Lineage Service'})
     RETURN DISTINCT s.name
   seed_description: Auth Service DEPENDS_ON Data Lineage Service; Payments Service DEPENDS_ON Data Lineage Service
+
+# --- Iteration v2 expansion: +20 questions, 3-5 per weak category. ---
+# Same rule: each answer must be verifiable from the markdown prose or
+# frontmatter AND derivable from graph.cypher. Questions deliberately vary
+# entity surface form (exact names vs. descriptive phrasings) so a
+# retrieve-by-name strategy is not always sufficient.
+
+- id: gold-011
+  category: one_hop
+  question: What programming language is the Data Lineage Service implemented in?
+  expected_answer: Python.
+  expected_entities:
+    - Python
+  seed_cypher: |
+    MATCH (:Entity {name: 'Data Lineage Service'})-[:IS_IMPLEMENTED_IN]->(t:Entity)
+    RETURN t.name
+  seed_description: Data Lineage Service IS_IMPLEMENTED_IN Python
+
+- id: gold-012
+  category: one_hop
+  question: Which cache does the Auth Service use for storing session data?
+  expected_answer: Redis.
+  expected_entities:
+    - Redis
+  seed_cypher: |
+    MATCH (:Entity {name: 'Auth Service'})-[:USES_DATABASE]->(t:Entity)
+    RETURN t.name
+  seed_description: Auth Service USES_DATABASE Redis (for session data caching)
+
+- id: gold-013
+  category: multi_hop_2
+  question: Who leads the team that operates the QuickCart Orders Service?
+  expected_answer: Bob Martinez leads the Orders Team, which operates the QuickCart Orders Service.
+  expected_entities:
+    - Bob Martinez
+    - Orders Team
+  seed_cypher: |
+    MATCH (:Entity {name: 'QuickCart Orders Service'})-[:OPERATED_BY]->(t:Entity)
+    MATCH (t)-[:IS_LED_BY]->(p:Entity)
+    RETURN p.name, t.name
+  seed_description: QuickCart Orders Service OPERATED_BY Orders Team; Orders Team IS_LED_BY Bob Martinez
+
+- id: gold-014
+  category: multi_hop_2
+  question: What programming language is the service developed by Bob Martinez built with?
+  expected_answer: Python - the Auth Service, which Bob Martinez developed, is built with Python.
+  expected_entities:
+    - Auth Service
+    - Python
+  seed_cypher: |
+    MATCH (s:Entity)-[:IS_DEVELOPED_BY]->(:Entity {name: 'Bob Martinez'})
+    MATCH (s)-[:IS_BUILT_WITH]->(lang:Entity)
+    RETURN s.name, lang.name
+  seed_description: Auth Service IS_DEVELOPED_BY Bob Martinez; Auth Service IS_BUILT_WITH Python
+
+- id: gold-015
+  category: multi_hop_2
+  question: Who authored the ADR about GDPR compliance, and what team do they lead?
+  expected_answer: Alice Chen authored the ADR and leads the SRE Team.
+  expected_entities:
+    - Alice Chen
+    - SRE Team
+  seed_cypher: |
+    MATCH (p:Entity)-[:AUTHORED|AUTHOR_OF|IS_AUTHOR_OF]->
+          (:Entity {name: 'ADR: GDPR Compliance Implementation'})
+    MATCH (t:Entity)-[:IS_LED_BY]->(p)
+    RETURN p.name, t.name
+  seed_description: 'Alice Chen IS_AUTHOR_OF "ADR: GDPR Compliance Implementation"; SRE Team IS_LED_BY Alice Chen'
+
+- id: gold-016
+  category: multi_hop_3
+  question: >-
+    Which programming language is used by the service that is managed by the
+    Platform Team and depends on the Data Lineage Service?
+  expected_answer: Python - the Auth Service is managed by the Platform Team, depends on the Data Lineage Service, and is built with Python.
+  expected_entities:
+    - Auth Service
+    - Python
+  seed_cypher: |
+    MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
+          -[:DEPENDS_ON]->(:Entity {name: 'Data Lineage Service'})
+    MATCH (s)-[:IS_BUILT_WITH]->(lang:Entity)
+    RETURN s.name, lang.name
+  seed_description: Platform Team MANAGES Auth Service; Auth Service DEPENDS_ON Data Lineage Service; Auth Service IS_BUILT_WITH Python
+
+- id: gold-017
+  category: multi_hop_3
+  question: >-
+    What programming language is used by the service developed by the person
+    who authored 'ADR: QuickCart Acquisition and Integration'?
+  expected_answer: Python - Bob Martinez authored the ADR and developed the Auth Service, which is built with Python.
+  expected_entities:
+    - Bob Martinez
+    - Auth Service
+    - Python
+  seed_cypher: |
+    MATCH (p:Entity)-[:AUTHORED|AUTHOR_OF|IS_AUTHOR_OF]->
+          (:Entity {name: 'ADR: QuickCart Acquisition and Integration'})
+    MATCH (s:Entity)-[:IS_DEVELOPED_BY]->(p)
+    MATCH (s)-[:IS_BUILT_WITH]->(lang:Entity)
+    RETURN p.name, s.name, lang.name
+  seed_description: 'Bob Martinez AUTHOR_OF "ADR: QuickCart Acquisition and Integration"; Auth Service IS_DEVELOPED_BY Bob Martinez; Auth Service IS_BUILT_WITH Python'
+
+- id: gold-018
+  category: multi_hop_3
+  question: >-
+    What role does the person who developed the authentication service managed
+    by the Platform Team have?
+  expected_answer: Staff SRE - Bob Martinez, who developed the Auth Service (managed by the Platform Team), is a Staff SRE.
+  expected_entities:
+    - Bob Martinez
+    - Staff SRE
+  seed_cypher: |
+    MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity {name: 'Auth Service'})
+    MATCH (s)-[:IS_DEVELOPED_BY]->(p:Entity)
+    MATCH (p)-[:IS]->(role:Entity)
+    RETURN p.name, role.name
+  seed_description: Platform Team MANAGES Auth Service; Auth Service IS_DEVELOPED_BY Bob Martinez; Bob Martinez IS Staff SRE
+
+- id: gold-019
+  category: dependency_chain
+  question: Which services rely on the Payments Service, directly or transitively?
+  expected_answer: The Fraud Detection Service relies on the Payments Service.
+  expected_entities:
+    - Fraud Detection Service
+  seed_cypher: |
+    MATCH (s:Entity)-[:RELIES_ON|DEPENDS_ON*1..4]->(t:Entity)
+    WHERE t.name IN ['Payments Service', 'service-payments-service']
+    RETURN DISTINCT s.name
+  seed_description: Fraud Detection Service RELIES_ON service-payments-service (tests rel-type unioning across RELIES_ON/DEPENDS_ON)
+
+- id: gold-020
+  category: dependency_chain
+  question: Which service, directly or transitively, depends on the ShopFlow application?
+  expected_answer: The Recommendation Service depends on the ShopFlow application.
+  expected_entities:
+    - Recommendation Service
+  seed_cypher: |
+    MATCH (s:Entity)-[:DEPENDS_ON*1..4]->(:Entity {name: 'ShopFlow'})
+    RETURN DISTINCT s.name
+  seed_description: Recommendation Service DEPENDS_ON ShopFlow
+
+- id: gold-021
+  category: dependency_chain
+  question: >-
+    Which services use Redis for caching or session storage? Consider all
+    relationship types that express use/employ/cache.
+  expected_answer: The Auth Service and the Payments Service both use Redis for caching.
+  expected_entities:
+    - Auth Service
+    - Payments Service
+  seed_cypher: |
+    MATCH (:Entity {name: 'Redis'})-[:IS_USED_BY]->(s:Entity)
+    RETURN DISTINCT s.name
+    UNION
+    MATCH (s:Entity)-[r]->(:Entity {name: 'Redis'})
+    WHERE type(r) IN ['USES_DATABASE','EMPLOYS','CACHES','UTILIZES']
+    RETURN DISTINCT s.name
+  seed_description: Redis IS_USED_BY {Auth Service, Payments Service}; also Auth Service USES_DATABASE Redis; Payments Service EMPLOYS Redis (tests rel-type unioning on both edge directions)
+
+- id: gold-022
+  category: shared_neighbor
+  question: Which cache database is used by both the Auth Service and the Payments Service?
+  expected_answer: Redis.
+  expected_entities:
+    - Redis
+  seed_cypher: |
+    MATCH (:Entity {name: 'Auth Service'})-->(t:Entity)<--(:Entity {name: 'Payments Service'})
+    WHERE t.name IN ['Redis', 'Redis Cache']
+    RETURN DISTINCT t.name
+  seed_description: Auth Service USES_DATABASE Redis; Payments Service EMPLOYS Redis
+
+- id: gold-023
+  category: shared_neighbor
+  question: Which programming language is used by both the Fraud Detection Service and the Recommendation Service?
+  expected_answer: Python.
+  expected_entities:
+    - Python
+  seed_cypher: |
+    MATCH (:Entity {name: 'Fraud Detection Service'})-->(t:Entity)<--(:Entity {name: 'Recommendation Service'})
+    WHERE t.name = 'Python'
+    RETURN DISTINCT t.name
+  seed_description: Fraud Detection Service IS_IMPLEMENTED_IN Python; Recommendation Service BUILT_USING Python (different rel types)
+
+- id: gold-024
+  category: shared_neighbor
+  question: Which services integrate with both the GraphQL Federation Layer and the Monolithic Django App?
+  expected_answer: The BFF Service and the Recommendation Service integrate with both.
+  expected_entities:
+    - BFF Service
+    - Recommendation Service
+  seed_cypher: |
+    MATCH (:Entity {name: 'GraphQL Federation Layer'})-[:INTEGRATES_WITH]->(t:Entity)
+          <-[:INTEGRATES_WITH]-(:Entity {name: 'Monolithic Django App'})
+    RETURN DISTINCT t.name
+  seed_description: Both GraphQL Federation Layer and Monolithic Django App INTEGRATES_WITH {BFF Service, Recommendation Service}
+
+- id: gold-025
+  category: aggregation_count
+  question: How many teams does the ShopFlow platform have?
+  expected_answer: ShopFlow has 9 teams - Catalog, Customer Experience, Data, Engineering, Logistics, Orders, Platform, Product, and the Site Reliability Engineering (SRE) Team.
+  expected_entities:
+    - "9"
+    - Catalog Team
+    - Customer Experience Team
+    - Data Team
+    - Engineering Team
+    - Logistics Team
+    - Orders Team
+    - Platform Team
+    - Product Team
+    - Site Reliability Engineering (SRE) Team
+  seed_cypher: |
+    MATCH (:Entity {name: 'ShopFlow'})-[:HAS_TEAM]->(t:Entity)
+    RETURN count(DISTINCT t) AS count, collect(t.name) AS teams
+  seed_description: ShopFlow HAS_TEAM (9 teams)
+
+- id: gold-026
+  category: aggregation_count
+  question: >-
+    How many distinct services or components have their code implemented in
+    Python?
+  expected_answer: 6 - the Auth Service, PII Service, Data Lineage Service, Fraud Detection Service, Recommendation Service, and the Monolithic Django App.
+  expected_entities:
+    - "6"
+    - Auth Service
+    - PII Service
+    - Data Lineage Service
+    - Fraud Detection Service
+    - Recommendation Service
+    - Monolithic Django App
+  seed_cypher: |
+    MATCH (s:Entity)-[r]->(:Entity {name: 'Python'})
+    WHERE type(r) IN ['IS_BUILT_WITH','IS_DEVELOPED_IN','IS_IMPLEMENTED_IN','BUILT_USING','IS_WRITTEN_IN']
+    RETURN count(DISTINCT s) AS count, collect(DISTINCT s.name) AS services
+  seed_description: Python-implementers across 5 different rel-type spellings - tests find_rel_types_like recipe
+
+- id: gold-027
+  category: aggregation_count
+  question: How many entities does the Fraud Detection Service directly integrate with (via INTEGRATES_WITH edges)?
+  expected_answer: 3 - Elasticsearch, Kibana, and QuickCart.
+  expected_entities:
+    - "3"
+    - Elasticsearch
+    - Kibana
+    - QuickCart
+  seed_cypher: |
+    MATCH (:Entity {name: 'Fraud Detection Service'})-[:INTEGRATES_WITH]->(t:Entity)
+    RETURN count(DISTINCT t) AS count, collect(t.name) AS entities
+  seed_description: Fraud Detection Service INTEGRATES_WITH {Elasticsearch, Kibana, QuickCart}
+
+- id: gold-028
+  category: negation
+  question: Among the services managed by the Platform Team, which ones are NOT implemented in Python?
+  expected_answer: The GraphQL Service is not documented as being implemented in Python (the Auth Service and PII Service both are).
+  expected_entities:
+    - GraphQL Service
+  seed_cypher: |
+    MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
+    WITH s
+    WHERE NOT EXISTS {
+      MATCH (s)-[r]->(:Entity {name: 'Python'})
+      WHERE type(r) IN ['IS_BUILT_WITH','IS_DEVELOPED_IN','IS_IMPLEMENTED_IN','BUILT_USING','IS_WRITTEN_IN']
+    }
+    RETURN s.name
+  seed_description: Platform Team MANAGES {Auth Service, GraphQL Service, PII Service}; Auth and PII are Python; GraphQL Service has no Python edge (it is JavaScript per MD)
+
+- id: gold-029
+  category: negation
+  question: Among the services that depend on the Data Lineage Service, which are NOT managed by the Platform Team?
+  expected_answer: The Payments Service and the Monolithic Django App depend on the Data Lineage Service but are not managed by the Platform Team.
+  expected_entities:
+    - Payments Service
+    - Monolithic Django App
+  seed_cypher: |
+    MATCH (s:Entity)-[:DEPENDS_ON]->(:Entity {name: 'Data Lineage Service'})
+    WITH DISTINCT s
+    WHERE NOT (:Entity {name: 'Platform Team'})-[:MANAGES]->(s)
+    RETURN s.name
+  seed_description: Of {Auth Service, Payments Service, Monolithic Django App} that DEPENDS_ON Data Lineage Service, only Auth Service is Platform-managed
+
+- id: gold-030
+  category: negation
+  question: Among the services implemented in Python, which ones are NOT managed by the Platform Team?
+  expected_answer: The Data Lineage Service, the Fraud Detection Service, the Recommendation Service, and the Monolithic Django App are implemented in Python but not managed by the Platform Team.
+  expected_entities:
+    - Data Lineage Service
+    - Fraud Detection Service
+    - Recommendation Service
+    - Monolithic Django App
+  seed_cypher: |
+    MATCH (s:Entity)-[r]->(:Entity {name: 'Python'})
+    WHERE type(r) IN ['IS_BUILT_WITH','IS_DEVELOPED_IN','IS_IMPLEMENTED_IN','BUILT_USING','IS_WRITTEN_IN']
+    WITH DISTINCT s
+    WHERE NOT (:Entity {name: 'Platform Team'})-[:MANAGES]->(s)
+    RETURN s.name
+  seed_description: Python-implementers minus Platform-managed services (tests set subtraction on a union of rel-type spellings - the core negation recipe)

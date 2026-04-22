@@ -15,10 +15,14 @@ knowledge_sources/
 # Secrets
 .env
 
-# Local artifacts
+# Local artifacts (scratch outputs at repo root).
+# NOTE: the patterns below are anchored to repo root so the same file names
+# inside iterations/v*/ remain tracked. Tracked iteration artifacts are the
+# citable fixtures behind each version of the paper; the root copies are
+# whatever the latest local run happened to produce.
 .chroma/
-eval_runs/
-eval_report*.md
+/eval_runs/
+/eval_report*.md
 graph_rag_graph_agent/eval/questions.yaml
 
 # OS metadata
