@@ -71,6 +71,11 @@ class QAPair:
     expected_entities: list[str]
     seed_cypher: str
     seed_description: str
+    # v3 instrumentation: concepts the gold author flagged as needing a
+    # rel-type union (e.g. ["depends on", "managed by"]). Used by the eval
+    # to score whether the agent invoked find_rel_types_like for each
+    # concept. Optional; older question files load without it.
+    concepts_in_question: list[str] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -574,4 +579,9 @@ def load_questions(path: Path | None = None) -> list[QAPair]:
             f"Run: uv run python main.py generate-eval"
         )
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or []
-    return [QAPair(**item) for item in raw]
+    known_fields = {f.name for f in __import__("dataclasses").fields(QAPair)}
+    pairs: list[QAPair] = []
+    for item in raw:
+        filtered = {k: v for k, v in item.items() if k in known_fields}
+        pairs.append(QAPair(**filtered))
+    return pairs

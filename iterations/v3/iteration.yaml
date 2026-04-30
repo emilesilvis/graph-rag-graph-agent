@@ -1,0 +1,16 @@
+id: v3
+created_at: 2026-04-30T19:35:55Z
+parent: v2
+run_id: 20260430T192426Z-a63891
+agents:
+  - rag
+  - graph
+question_count: 30
+summary: "Diagnostic-only iteration: tool-call trace, oracle Cypher attribution per question, find_rel_types_like coverage. No agent or prompt changes. Headline within nondeterminism noise of v2 (graph 0.72/0.70, RAG 0.47/0.45). Attribution shows graph: 19 agent_ok, 10 agent_miss, 1 extraction_miss."
+changes:
+  - "eval/trace.py: extract tool-call telemetry from langgraph message lists"
+  - "eval/oracle.py: run gold seed_cypher against live graph; attribute extraction_miss vs agent_miss"
+  - "agents/{graph,rag}_agent.py: symmetric ask_with_trace returning the raw message list"
+  - "eval/run.py: store trace + oracle attribution per question"
+  - "eval/report.py: tool-call counts, failure attribution, find_rel_types_like coverage sections"
+  - "eval_data/shopflow_gold.yaml: added concepts_in_question per question"

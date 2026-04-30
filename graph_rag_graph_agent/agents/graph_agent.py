@@ -6,7 +6,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-from graph_rag_graph_agent.agents.common import BASE_PERSONA, with_sections
+from graph_rag_graph_agent.agents.common import AgentRun, BASE_PERSONA, with_sections
 from graph_rag_graph_agent.agents.memory import (
     SCRATCHPAD_TOOLS,
     set_active_thread,
@@ -187,6 +187,15 @@ class GraphAgent:
         )
 
     def ask(self, question: str, thread_id: str = "default") -> str:
+        return self.ask_with_trace(question, thread_id=thread_id).answer
+
+    def ask_with_trace(self, question: str, thread_id: str = "default") -> AgentRun:
+        """Run the agent and return both the final answer and the raw message list.
+
+        The eval runner uses the raw messages to extract tool-call telemetry
+        (counts, Cypher queries, find_rel_types_like coverage, recursion-limit
+        signal). `ask` is a thin wrapper around this for non-eval callers.
+        """
         set_active_thread(thread_id)
         result = self.agent.invoke(
             {"messages": [{"role": "user", "content": question}]},
@@ -202,7 +211,9 @@ class GraphAgent:
             },
         )
         messages = result["messages"]
+        answer = ""
         for msg in reversed(messages):
             if getattr(msg, "type", None) == "ai" and getattr(msg, "content", None):
-                return msg.content if isinstance(msg.content, str) else str(msg.content)
-        return ""
+                answer = msg.content if isinstance(msg.content, str) else str(msg.content)
+                break
+        return AgentRun(answer=answer, messages=list(messages))

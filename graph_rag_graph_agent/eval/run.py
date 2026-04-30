@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from rich.console import Console
 from rich.table import Table
@@ -24,6 +24,16 @@ from graph_rag_graph_agent.config import (
 )
 from graph_rag_graph_agent.eval.generate import QAPair, load_questions
 from graph_rag_graph_agent.eval.judge import Judge, Judgement
+from graph_rag_graph_agent.eval.oracle import (
+    OracleResult,
+    attribute_status,
+    run_oracle,
+)
+from graph_rag_graph_agent.eval.trace import (
+    AgentTraceSummary,
+    extract_trace,
+    trace_to_dict,
+)
 
 console = Console()
 
@@ -43,6 +53,18 @@ class TurnResult:
     rationale: str
     latency_seconds: float
     error: str | None = None
+    # v3 instrumentation. None / empty defaults so old reports keep loading.
+    concepts_in_question: list[str] = field(default_factory=list)
+    oracle_cypher: str = ""
+    oracle_row_count: int = 0
+    oracle_has_oracle: bool = False
+    oracle_error: str | None = None
+    oracle_status: str = "no_oracle"
+    tool_call_count: int = 0
+    hit_recursion_limit: bool = False
+    step_at_first_relevant_match: int | None = None
+    find_rel_types_like_calls: dict[str, bool] = field(default_factory=dict)
+    trace: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -84,15 +106,33 @@ def run_eval(
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:6]
     results: list[TurnResult] = []
 
+    # Cache oracle execution per question (independent of agent).
+    oracle_cache: dict[str, OracleResult] = {}
+
     for q in tqdm(questions, desc="questions"):
+        if q.id not in oracle_cache:
+            try:
+                oracle_cache[q.id] = run_oracle(q.seed_cypher, config=config)
+            except Exception as exc:  # noqa: BLE001 - never let oracle break eval
+                oracle_cache[q.id] = OracleResult(
+                    cypher=q.seed_cypher,
+                    row_count=0,
+                    error=f"{type(exc).__name__}: {exc}",
+                    has_oracle=bool(q.seed_cypher and q.seed_cypher.strip()),
+                )
+        oracle = oracle_cache[q.id]
+
         for agent_name in agents:
             thread_id = f"{run_id}-{agent_name}-{q.id}"
             reset_scratchpad(thread_id)
             runner = runners[agent_name]
             start = time.perf_counter()
             error: str | None = None
+            messages: list[Any] = []
             try:
-                answer = runner.ask(q.question, thread_id=thread_id)
+                run = runner.ask_with_trace(q.question, thread_id=thread_id)
+                answer = run.answer
+                messages = run.messages
             except Exception as exc:  # noqa: BLE001
                 answer = f"(agent error: {type(exc).__name__}: {exc})"
                 error = str(exc)
@@ -109,6 +149,17 @@ def run_eval(
             except Exception as exc:  # noqa: BLE001
                 judgement = Judgement(verdict="wrong", rationale=f"judge error: {exc}", raw="")
 
+            trace: AgentTraceSummary = extract_trace(
+                messages,
+                expected_entities=q.expected_entities,
+                concepts_in_question=q.concepts_in_question,
+            )
+            oracle_status = attribute_status(
+                agent_name=agent_name,
+                verdict=judgement.verdict,
+                oracle=oracle,
+            )
+
             results.append(
                 TurnResult(
                     question_id=q.id,
@@ -122,6 +173,17 @@ def run_eval(
                     rationale=judgement.rationale,
                     latency_seconds=latency,
                     error=error,
+                    concepts_in_question=list(q.concepts_in_question),
+                    oracle_cypher=oracle.cypher,
+                    oracle_row_count=oracle.row_count,
+                    oracle_has_oracle=oracle.has_oracle,
+                    oracle_error=oracle.error,
+                    oracle_status=oracle_status,
+                    tool_call_count=trace.tool_call_count,
+                    hit_recursion_limit=trace.hit_recursion_limit,
+                    step_at_first_relevant_match=trace.step_at_first_relevant_match,
+                    find_rel_types_like_calls=dict(trace.find_rel_types_like_calls),
+                    trace=trace_to_dict(trace),
                 )
             )
 

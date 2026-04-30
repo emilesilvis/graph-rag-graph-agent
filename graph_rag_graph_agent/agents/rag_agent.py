@@ -9,7 +9,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-from graph_rag_graph_agent.agents.common import BASE_PERSONA, with_sections
+from graph_rag_graph_agent.agents.common import AgentRun, BASE_PERSONA, with_sections
 from graph_rag_graph_agent.agents.memory import (
     SCRATCHPAD_TOOLS,
     set_active_thread,
@@ -91,6 +91,15 @@ class RAGAgent:
 
     def ask(self, question: str, thread_id: str = "default") -> str:
         """Run the agent on a question and return its final answer string."""
+        return self.ask_with_trace(question, thread_id=thread_id).answer
+
+    def ask_with_trace(self, question: str, thread_id: str = "default") -> AgentRun:
+        """Run the agent and return both the final answer and the raw message list.
+
+        Mirrors `GraphAgent.ask_with_trace`. The eval runner consumes the raw
+        messages via `eval.trace.extract_trace` to compute tool-call counts,
+        recursion-limit signal, and step-at-first-relevant-match.
+        """
         set_active_thread(thread_id)
         result = self.agent.invoke(
             {"messages": [{"role": "user", "content": question}]},
@@ -100,7 +109,9 @@ class RAGAgent:
             },
         )
         messages = result["messages"]
+        answer = ""
         for msg in reversed(messages):
             if getattr(msg, "type", None) == "ai" and getattr(msg, "content", None):
-                return msg.content if isinstance(msg.content, str) else str(msg.content)
-        return ""
+                answer = msg.content if isinstance(msg.content, str) else str(msg.content)
+                break
+        return AgentRun(answer=answer, messages=list(messages))

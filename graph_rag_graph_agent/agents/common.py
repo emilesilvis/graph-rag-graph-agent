@@ -10,6 +10,21 @@ env var - it's injected symmetrically into both agents.
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass
+class AgentRun:
+    """Structured return value of `ask_with_trace`.
+
+    Symmetric across both agents so the eval runner can feed the raw
+    `messages` list to `eval.trace.extract_trace` without paradigm-specific
+    branching.
+    """
+
+    answer: str
+    messages: list[Any] = field(default_factory=list)
 
 
 def _domain_line() -> str:

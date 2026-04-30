@@ -3,6 +3,18 @@
 # Each question's expected answer is verifiable in BOTH the markdown wiki
 # and the graph.cypher content, so neither agent is disadvantaged by the
 # choice of knowledge source. Compact, clear ground truth for the judge.
+#
+# Fields:
+#   - id, category, question, expected_answer, expected_entities: as before.
+#   - seed_cypher: doubles as the v3 oracle. Run against the live extracted
+#     graph; 0 rows means the answer is not reachable from the graph and
+#     the row will be tagged `extraction_miss` for the graph agent.
+#   - seed_description: human-readable shape of the gold structure.
+#   - concepts_in_question: v3 - English verbs / noun-verb phrases whose
+#     rel-type spellings the graph agent should union via
+#     `find_rel_types_like` before answering. Used by the eval to score
+#     whether the agent invoked that tool for each concept; does NOT alter
+#     agent behaviour.
 
 - id: gold-001
   category: one_hop
@@ -10,6 +22,8 @@
   expected_answer: The Platform Team manages the Auth Service.
   expected_entities:
     - Platform Team
+  concepts_in_question:
+    - manages
   seed_cypher: "MATCH (:Entity {name: 'Auth Service'})-[:IS_MANAGED_BY]->(t) RETURN t.name"
   seed_description: Auth Service IS_MANAGED_BY Platform Team
 
@@ -19,6 +33,8 @@
   expected_answer: Python.
   expected_entities:
     - Python
+  concepts_in_question:
+    - implemented in
   seed_cypher: ""
   seed_description: Wiki says "Implemented in Python"
 
@@ -28,6 +44,8 @@
   expected_answer: Istio facilitates service-to-service communication.
   expected_entities:
     - service-to-service communication
+  concepts_in_question:
+    - facilitates
   seed_cypher: "MATCH (:Entity {name: 'Istio'})-[:FACILITATES]->(t) RETURN t.name"
   seed_description: (Istio)-[:FACILITATES]->(service-to-service communication)
 
@@ -39,6 +57,9 @@
     - AWS
     - Kubernetes EKS
     - Kafka
+  concepts_in_question:
+    - manages
+    - uses infrastructure
   seed_cypher: |
     MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity {name: 'Auth Service'})
           -[:USES_INFRASTRUCTURE]->(t:Entity)
@@ -52,6 +73,9 @@
   expected_entities:
     - Bob Martinez
     - Staff SRE
+  concepts_in_question:
+    - authored
+    - role
   seed_cypher: |
     MATCH (p:Entity)-[:AUTHORED|AUTHOR_OF|IS_AUTHOR_OF]->
           (adr:Entity {name: 'ADR: QuickCart Acquisition and Integration'})
@@ -65,6 +89,8 @@
   expected_answer: Python is used by both.
   expected_entities:
     - Python
+  concepts_in_question:
+    - implemented in
   seed_cypher: |
     MATCH (:Entity {name: 'Auth Service'})-->(t:Entity)<--(:Entity {name: 'PII Service'})
     RETURN DISTINCT t.name
@@ -79,6 +105,8 @@
     - Auth Service
     - GraphQL Service
     - PII Service
+  concepts_in_question:
+    - manages
   seed_cypher: |
     MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
     RETURN count(DISTINCT s) AS count, collect(s.name) AS services
@@ -91,6 +119,9 @@
   expected_entities:
     - GraphQL Service
     - PII Service
+  concepts_in_question:
+    - manages
+    - depends on
   seed_cypher: |
     MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
     WHERE NOT (s)-[:DEPENDS_ON]->(:Entity {name: 'Data Lineage Service'})
@@ -104,6 +135,9 @@
   expected_entities:
     - Auth Service
     - Redis
+  concepts_in_question:
+    - developed by
+    - uses for caching
   seed_cypher: |
     MATCH (:Entity {name: 'Bob Martinez'})<-[:IS_DEVELOPED_BY]-(s:Entity)
           -[:USES_DATABASE]->(db:Entity)
@@ -117,6 +151,8 @@
   expected_entities:
     - Auth Service
     - Payments Service
+  concepts_in_question:
+    - depends on
   seed_cypher: |
     MATCH (s:Entity)-[:DEPENDS_ON*1..4]->(:Entity {name: 'Data Lineage Service'})
     RETURN DISTINCT s.name
@@ -134,6 +170,8 @@
   expected_answer: Python.
   expected_entities:
     - Python
+  concepts_in_question:
+    - implemented in
   seed_cypher: |
     MATCH (:Entity {name: 'Data Lineage Service'})-[:IS_IMPLEMENTED_IN]->(t:Entity)
     RETURN t.name
@@ -145,6 +183,8 @@
   expected_answer: Redis.
   expected_entities:
     - Redis
+  concepts_in_question:
+    - uses cache
   seed_cypher: |
     MATCH (:Entity {name: 'Auth Service'})-[:USES_DATABASE]->(t:Entity)
     RETURN t.name
@@ -157,6 +197,9 @@
   expected_entities:
     - Bob Martinez
     - Orders Team
+  concepts_in_question:
+    - operates
+    - leads
   seed_cypher: |
     MATCH (:Entity {name: 'QuickCart Orders Service'})-[:OPERATED_BY]->(t:Entity)
     MATCH (t)-[:IS_LED_BY]->(p:Entity)
@@ -170,6 +213,9 @@
   expected_entities:
     - Auth Service
     - Python
+  concepts_in_question:
+    - developed by
+    - built with
   seed_cypher: |
     MATCH (s:Entity)-[:IS_DEVELOPED_BY]->(:Entity {name: 'Bob Martinez'})
     MATCH (s)-[:IS_BUILT_WITH]->(lang:Entity)
@@ -183,6 +229,9 @@
   expected_entities:
     - Alice Chen
     - SRE Team
+  concepts_in_question:
+    - authored
+    - leads
   seed_cypher: |
     MATCH (p:Entity)-[:AUTHORED|AUTHOR_OF|IS_AUTHOR_OF]->
           (:Entity {name: 'ADR: GDPR Compliance Implementation'})
@@ -199,6 +248,10 @@
   expected_entities:
     - Auth Service
     - Python
+  concepts_in_question:
+    - managed by
+    - depends on
+    - built with
   seed_cypher: |
     MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
           -[:DEPENDS_ON]->(:Entity {name: 'Data Lineage Service'})
@@ -216,6 +269,10 @@
     - Bob Martinez
     - Auth Service
     - Python
+  concepts_in_question:
+    - authored
+    - developed by
+    - built with
   seed_cypher: |
     MATCH (p:Entity)-[:AUTHORED|AUTHOR_OF|IS_AUTHOR_OF]->
           (:Entity {name: 'ADR: QuickCart Acquisition and Integration'})
@@ -233,6 +290,10 @@
   expected_entities:
     - Bob Martinez
     - Staff SRE
+  concepts_in_question:
+    - managed by
+    - developed by
+    - role
   seed_cypher: |
     MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity {name: 'Auth Service'})
     MATCH (s)-[:IS_DEVELOPED_BY]->(p:Entity)
@@ -246,6 +307,8 @@
   expected_answer: The Fraud Detection Service relies on the Payments Service.
   expected_entities:
     - Fraud Detection Service
+  concepts_in_question:
+    - depends on
   seed_cypher: |
     MATCH (s:Entity)-[:RELIES_ON|DEPENDS_ON*1..4]->(t:Entity)
     WHERE t.name IN ['Payments Service', 'service-payments-service']
@@ -258,6 +321,8 @@
   expected_answer: The Recommendation Service depends on the ShopFlow application.
   expected_entities:
     - Recommendation Service
+  concepts_in_question:
+    - depends on
   seed_cypher: |
     MATCH (s:Entity)-[:DEPENDS_ON*1..4]->(:Entity {name: 'ShopFlow'})
     RETURN DISTINCT s.name
@@ -272,6 +337,8 @@
   expected_entities:
     - Auth Service
     - Payments Service
+  concepts_in_question:
+    - uses for caching
   seed_cypher: |
     MATCH (:Entity {name: 'Redis'})-[:IS_USED_BY]->(s:Entity)
     RETURN DISTINCT s.name
@@ -287,6 +354,8 @@
   expected_answer: Redis.
   expected_entities:
     - Redis
+  concepts_in_question:
+    - uses cache
   seed_cypher: |
     MATCH (:Entity {name: 'Auth Service'})-->(t:Entity)<--(:Entity {name: 'Payments Service'})
     WHERE t.name IN ['Redis', 'Redis Cache']
@@ -299,6 +368,8 @@
   expected_answer: Python.
   expected_entities:
     - Python
+  concepts_in_question:
+    - implemented in
   seed_cypher: |
     MATCH (:Entity {name: 'Fraud Detection Service'})-->(t:Entity)<--(:Entity {name: 'Recommendation Service'})
     WHERE t.name = 'Python'
@@ -312,6 +383,8 @@
   expected_entities:
     - BFF Service
     - Recommendation Service
+  concepts_in_question:
+    - integrates with
   seed_cypher: |
     MATCH (:Entity {name: 'GraphQL Federation Layer'})-[:INTEGRATES_WITH]->(t:Entity)
           <-[:INTEGRATES_WITH]-(:Entity {name: 'Monolithic Django App'})
@@ -333,6 +406,8 @@
     - Platform Team
     - Product Team
     - Site Reliability Engineering (SRE) Team
+  concepts_in_question:
+    - has team
   seed_cypher: |
     MATCH (:Entity {name: 'ShopFlow'})-[:HAS_TEAM]->(t:Entity)
     RETURN count(DISTINCT t) AS count, collect(t.name) AS teams
@@ -352,6 +427,8 @@
     - Fraud Detection Service
     - Recommendation Service
     - Monolithic Django App
+  concepts_in_question:
+    - implemented in
   seed_cypher: |
     MATCH (s:Entity)-[r]->(:Entity {name: 'Python'})
     WHERE type(r) IN ['IS_BUILT_WITH','IS_DEVELOPED_IN','IS_IMPLEMENTED_IN','BUILT_USING','IS_WRITTEN_IN']
@@ -367,6 +444,8 @@
     - Elasticsearch
     - Kibana
     - QuickCart
+  concepts_in_question:
+    - integrates with
   seed_cypher: |
     MATCH (:Entity {name: 'Fraud Detection Service'})-[:INTEGRATES_WITH]->(t:Entity)
     RETURN count(DISTINCT t) AS count, collect(t.name) AS entities
@@ -378,6 +457,9 @@
   expected_answer: The GraphQL Service is not documented as being implemented in Python (the Auth Service and PII Service both are).
   expected_entities:
     - GraphQL Service
+  concepts_in_question:
+    - managed by
+    - implemented in
   seed_cypher: |
     MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
     WITH s
@@ -395,6 +477,9 @@
   expected_entities:
     - Payments Service
     - Monolithic Django App
+  concepts_in_question:
+    - depends on
+    - managed by
   seed_cypher: |
     MATCH (s:Entity)-[:DEPENDS_ON]->(:Entity {name: 'Data Lineage Service'})
     WITH DISTINCT s
@@ -411,6 +496,9 @@
     - Fraud Detection Service
     - Recommendation Service
     - Monolithic Django App
+  concepts_in_question:
+    - implemented in
+    - managed by
   seed_cypher: |
     MATCH (s:Entity)-[r]->(:Entity {name: 'Python'})
     WHERE type(r) IN ['IS_BUILT_WITH','IS_DEVELOPED_IN','IS_IMPLEMENTED_IN','BUILT_USING','IS_WRITTEN_IN']

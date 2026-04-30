@@ -83,9 +83,13 @@ Because the graph is KGGen-extracted, a graph miss is either:
 - **reasoning miss** — the fact *is* in the graph, but the agent
   didn't construct the right Cypher; tunable.
 
-When analysing a failing question, run the "oracle" Cypher you'd write
-by hand against the graph. Empty → extraction miss. Non-empty → work
-on the agent.
+This split is **computed automatically** by the eval. Every gold
+question carries a `seed_cypher` that the eval runs read-only against
+the live graph as an oracle: 0 rows → `extraction_miss`, ≥1 rows
+paired with a wrong/partial answer → `agent_miss`, ≥1 rows paired
+with a correct answer → `agent_ok`. See "How the eval pipeline
+works" below for the full bucket definition and where it surfaces in
+the report.
 
 ## Prerequisites
 
@@ -134,6 +138,10 @@ uv run python main.py eval
 # Run against a hand-curated gold set instead of the auto-generated one
 uv run python main.py eval -q eval_data/shopflow_gold.yaml
 
+# Restrict to one agent (still requires Neo4j up: the oracle Cypher
+# runs per-question regardless of which agent set you select)
+uv run python main.py eval --agent rag --limit 5
+
 # To promote a run + paper into a versioned snapshot for Git, see
 # "Iteration snapshots" below (new-iteration).
 
@@ -141,6 +149,100 @@ uv run python main.py eval -q eval_data/shopflow_gold.yaml
 uv run python main.py chat --agent rag
 uv run python main.py chat --agent graph
 ```
+
+## How the eval pipeline works
+
+The `eval` command turns a gold question set into one JSON run file
+plus a rendered markdown report. It's the same pipeline whether you
+pass `eval_data/shopflow_gold.yaml` or the auto-generated
+`graph_rag_graph_agent/eval/questions.yaml`.
+
+### Gold question schema
+
+Each entry in a gold YAML carries:
+
+| Field | Purpose |
+|---|---|
+| `id` | Stable id (e.g. `gold-001`) used as the join key in reports. |
+| `category` | One of the seven categories below; drives the per-category aggregation. |
+| `question` | Natural-language prompt sent to both agents. |
+| `expected_answer` | Free-text gold answer; fed to the LLM judge. |
+| `expected_entities` | Names that must appear in a correct answer; the judge weighs these heavily and the trace extractor uses them to find the first tool output where any showed up. |
+| `seed_cypher` | Read-only Cypher whose row count grounds the gold answer in the live graph. Doubles as the **oracle**: 0 rows → graph extraction miss; ≥1 rows → reachable. Empty string means "no oracle for this question" (the fact lives only in the markdown). |
+| `seed_description` | Human-readable shape of the gold structure (for reviewers). |
+| `concepts_in_question` | English verbs / noun-verb phrases (e.g. `manages`, `depends on`) whose rel-type spellings the graph agent should union via `find_rel_types_like` before answering. The eval scores **coverage** — did the agent actually probe each concept? — without altering agent behaviour. |
+
+The auto-generated set (`generate-eval`) emits the first five fields;
+the v3 oracle and coverage fields are added by hand when curating a
+gold set.
+
+### Per-question loop
+
+For each `(question, agent)` pair, `run_eval`
+(`graph_rag_graph_agent/eval/run.py`) does the following:
+
+1. **Run the oracle once per question** (cached across agents). The
+   `seed_cypher` is executed read-only against Neo4j; the row count,
+   any error, and a `has_oracle` flag are stored on every turn that
+   shares the question id. This is why Neo4j must be reachable even
+   for `--agent rag`.
+2. **Invoke the agent** via `ask_with_trace`, which returns both the
+   final answer and the raw LangGraph message list. Latency is
+   measured around this call. Agent errors are captured rather than
+   raised, so one broken question doesn't kill the run.
+3. **Grade the answer** with the LLM-as-judge
+   (`graph_rag_graph_agent/eval/judge.py`, default `gpt-4o`),
+   producing a verdict (`correct` / `partial` / `wrong`) and a
+   rationale.
+4. **Extract a trace** from the message list
+   (`graph_rag_graph_agent/eval/trace.py`): tool-call count, every
+   `run_cypher` query (with its row count and any preflight NOTEs),
+   `find_rel_types_like` arguments, whether the recursion limit
+   tripped (detected via the LangGraph "Sorry, need more steps…"
+   marker), and the step index at which any `expected_entity` first
+   appeared in tool output.
+5. **Attribute** the row to one of four buckets
+   (`graph_rag_graph_agent/eval/oracle.py::attribute_status`):
+
+   | Status | Definition |
+   |---|---|
+   | `agent_ok` | Oracle returned ≥1 rows AND the agent answered correctly. |
+   | `agent_miss` | Oracle returned ≥1 rows AND the agent answered wrong / partial — a reasoning failure, recoverable. |
+   | `extraction_miss` | Graph agent only: oracle returned 0 rows or the question has no oracle. The graph itself doesn't support the answer; not tunable without re-extracting. |
+   | `no_oracle` | Reserved for the rare case of a `seed_cypher` that errors at runtime (a gold-YAML bug), so genuine extraction misses don't get masked. RAG rows always fall back to verdict-only attribution and never carry `extraction_miss`. |
+
+The aggregated `RunSummary` is dumped to
+`eval_runs/<run_id>.json` (every turn, every field above) and a quick
+per-category Rich table is printed to the terminal.
+
+### What `eval_report.md` contains
+
+`graph_rag_graph_agent/eval/report.py` renders the latest (or a
+specified) run as markdown with these sections:
+
+1. **Accuracy by category** — mean judge score per category per
+   agent, plus an overall row.
+2. **Latency** — mean and p95 wall-clock seconds per agent.
+3. **Tool-call counts** — mean tool calls per question per category
+   per agent (a proxy for retrieval / refinement effort).
+4. **Failure attribution** — per category and agent, the count of
+   each `agent_ok` / `agent_miss` / `extraction_miss` / `no_oracle`
+   bucket. This is the section that turns a single mean like
+   `negation 0.25 (n=4)` into "X were `agent_miss`, Y were
+   `extraction_miss`".
+5. **`find_rel_types_like` coverage (graph agent)** — for every
+   gold question with `concepts_in_question`, did the graph agent
+   probe each concept via `find_rel_types_like`? Useful for
+   testing whether prompt-level recipes are actually being
+   followed.
+6. **Per-question detail** — question, expected answer, oracle
+   row count, then for each agent: verdict, latency, tool-call
+   count, step-cap signal, oracle status, judge rationale, and a
+   400-char preview of the answer.
+
+The report is written to repo-root `eval_report.md` (gitignored).
+The citable copy lives under `iterations/<id>/eval_report.md` once
+you cut an iteration.
 
 ## Iteration snapshots (paper + eval)
 
@@ -243,10 +345,14 @@ agent, plus latency and a per-question breakdown.
 graph_rag_graph_agent/
   config.py              env + path config
   agents/
-    rag_agent.py         chunk-RAG React agent
-    graph_agent.py       text-to-Cypher React agent
-    memory.py            scratchpad tools
-    common.py            shared persona / prompt helpers
+    rag_agent.py         chunk-RAG ReAct agent (24-step recursion cap).
+                         Exposes `ask(...)` for chat and `ask_with_trace(...)`
+                         returning (answer, raw langgraph messages) for eval.
+    graph_agent.py       text-to-Cypher ReAct agent (40-step recursion cap).
+                         Same (ask, ask_with_trace) contract.
+    memory.py            scratchpad_read / scratchpad_write / scratchpad_clear
+    common.py            BASE_PERSONA, prompt helpers, and the AgentRun
+                         dataclass shared by both agents' ask_with_trace
   rag/
     ingest.py            markdown -> chunks -> Chroma
     retriever.py         WikiRetriever
@@ -260,9 +366,16 @@ graph_rag_graph_agent/
   eval/
     generate.py          sample graph + LLM-synthesise questions
     questions.yaml       generated question set (review by hand)
-    judge.py             LLM-as-judge
-    run.py               run both agents + grade + save JSON
-    report.py            markdown report
+    judge.py             LLM-as-judge (default gpt-4o)
+    oracle.py            run each gold question's seed_cypher and
+                         attribute rows to agent_ok / agent_miss /
+                         extraction_miss / no_oracle
+    trace.py             extract tool-call trace, Cypher telemetry,
+                         recursion-limit signal, and find_rel_types_like
+                         coverage from the LangGraph message list
+    run.py               per-question loop: agent -> judge -> oracle
+                         -> trace; saves eval_runs/<run_id>.json
+    report.py            render eval_report.md from a run JSON
 eval_data/               hand-curated gold question sets (one per corpus)
 eval_runs/               raw run JSON (gitignored; promoted via new-iteration)
 iterations/              versioned paper + eval_report + eval_run.json per cut

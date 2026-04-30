@@ -37,10 +37,41 @@ def _aggregate(results: list[dict], agents: list[str]) -> dict:
         c: {a: [] for a in agents} for c in cats
     }
     latency: dict[str, list[float]] = {a: [] for a in agents}
+    tool_calls: dict[str, dict[str, list[int]]] = {
+        c: {a: [] for a in agents} for c in cats
+    }
     for r in results:
         per_cat[r["category"]][r["agent"]].append(_score(r["verdict"]))
         latency[r["agent"]].append(float(r["latency_seconds"]))
-    return {"per_cat": per_cat, "latency": latency, "categories": cats}
+        tcc = int(r.get("tool_call_count", 0) or 0)
+        tool_calls[r["category"]][r["agent"]].append(tcc)
+    return {
+        "per_cat": per_cat,
+        "latency": latency,
+        "categories": cats,
+        "tool_calls": tool_calls,
+    }
+
+
+def _attribution_split(results: list[dict], agents: list[str]) -> dict:
+    """Count {agent_ok, agent_miss, extraction_miss, no_oracle} per category.
+
+    Returns a nested dict shape: split[category][agent][status] = count.
+    Only meaningful for the graph agent's `extraction_miss` bucket; for RAG
+    we still report it for symmetry but the attribution module forces
+    `agent_ok` / `agent_miss` based on verdict only.
+    """
+    cats = sorted({r["category"] for r in results})
+    statuses = ["agent_ok", "agent_miss", "extraction_miss", "no_oracle"]
+    split: dict[str, dict[str, dict[str, int]]] = {
+        c: {a: {s: 0 for s in statuses} for a in agents} for c in cats
+    }
+    for r in results:
+        status = r.get("oracle_status", "no_oracle")
+        if status not in statuses:
+            status = "no_oracle"
+        split[r["category"]][r["agent"]][status] += 1
+    return {"split": split, "categories": cats, "statuses": statuses}
 
 
 def write_report(
@@ -109,6 +140,101 @@ def write_report(
         lines.append(f"| {a} | {mean:.2f} | {p95:.2f} | {len(lat)} |")
     lines.append("")
 
+    # --- Tool-call counts (v3 instrumentation) -----------------------------
+    has_tool_data = any(
+        any(int(r.get("tool_call_count", 0) or 0) > 0 for r in results if r["agent"] == a)
+        for a in agents
+    )
+    if has_tool_data:
+        lines.append("## Tool-call counts")
+        lines.append("")
+        lines.append(
+            "Mean tool calls per question, per category. Higher = the agent "
+            "needed more retrieval or refinement steps to answer."
+        )
+        lines.append("")
+        header = "| Category | " + " | ".join(agents) + " |"
+        sep = "| --- | " + " | ".join("---" for _ in agents) + " |"
+        lines.append(header)
+        lines.append(sep)
+        for cat in agg["categories"]:
+            row = [cat]
+            for a in agents:
+                counts = agg["tool_calls"][cat][a]
+                if counts:
+                    row.append(f"{sum(counts) / len(counts):.1f} (n={len(counts)})")
+                else:
+                    row.append("-")
+            lines.append("| " + " | ".join(row) + " |")
+        lines.append("")
+
+    # --- Failure attribution (v3) ------------------------------------------
+    has_oracle_data = any(r.get("oracle_status") for r in results)
+    if has_oracle_data:
+        attr = _attribution_split(results, agents)
+        lines.append("## Failure attribution")
+        lines.append("")
+        lines.append(
+            "Per category and agent, how each row was attributed by the "
+            "oracle Cypher. `extraction_miss` = the gold answer is not "
+            "reachable from the extracted graph (graph paradigm only); "
+            "`agent_miss` = reachable but the agent answered wrong / "
+            "partial; `agent_ok` = reachable and the agent answered "
+            "correctly; `no_oracle` = the question has no seed_cypher "
+            "(answer lives only in the markdown)."
+        )
+        lines.append("")
+        for a in agents:
+            lines.append(f"### {a}")
+            lines.append("")
+            header = "| Category | agent_ok | agent_miss | extraction_miss | no_oracle |"
+            lines.append(header)
+            lines.append("| --- | --- | --- | --- | --- |")
+            totals = {s: 0 for s in attr["statuses"]}
+            for cat in attr["categories"]:
+                row = [cat]
+                for s in attr["statuses"]:
+                    n = attr["split"][cat][a][s]
+                    totals[s] += n
+                    row.append(str(n))
+                lines.append("| " + " | ".join(row) + " |")
+            tot_row = ["**total**"] + [f"**{totals[s]}**" for s in attr["statuses"]]
+            lines.append("| " + " | ".join(tot_row) + " |")
+            lines.append("")
+
+    # --- find_rel_types_like coverage (graph only, v3) ---------------------
+    coverage_rows: list[tuple[str, list[str], dict[str, bool]]] = []
+    for r in results:
+        if r["agent"] != "graph":
+            continue
+        concepts = r.get("concepts_in_question") or []
+        if not concepts:
+            continue
+        coverage_rows.append(
+            (
+                r["question_id"],
+                list(concepts),
+                dict(r.get("find_rel_types_like_calls") or {}),
+            )
+        )
+    if coverage_rows:
+        lines.append("## `find_rel_types_like` coverage (graph agent)")
+        lines.append("")
+        lines.append(
+            "For each gold question that flagged concepts requiring "
+            "rel-type unioning, did the graph agent invoke "
+            "`find_rel_types_like` for each concept? A concept is matched "
+            "fuzzily by token / stem overlap with the tool's `concept` arg."
+        )
+        lines.append("")
+        lines.append("| Question | Concept | Probed? |")
+        lines.append("| --- | --- | --- |")
+        for qid, concepts, calls in coverage_rows:
+            for c in concepts:
+                hit = calls.get(c, False)
+                lines.append(f"| `{qid}` | {c} | {'yes' if hit else 'no'} |")
+        lines.append("")
+
     lines.append("## Per-question detail")
     lines.append("")
     q_to_results: dict[str, dict[str, dict]] = {}
@@ -126,13 +252,35 @@ def write_report(
         if sample.get("expected_entities"):
             lines.append(f"**Key entities:** {', '.join(sample['expected_entities'])}")
         lines.append("")
+        # Oracle row (shared across agents for this question).
+        any_row = next(iter(cell.values()))
+        if any_row.get("oracle_has_oracle"):
+            ocount = any_row.get("oracle_row_count", 0)
+            lines.append(f"**Oracle Cypher rows:** {ocount}")
+            lines.append("")
+        elif any_row.get("oracle_cypher") is not None and (
+            "oracle_has_oracle" in any_row
+        ):
+            lines.append("**Oracle Cypher rows:** (no oracle for this question)")
+            lines.append("")
+
         for a in agents:
             if a not in cell:
                 continue
             r = cell[a]
             mark = _VERDICT_EMOJI.get(r["verdict"], "?")
+            extras: list[str] = []
+            tcc = r.get("tool_call_count")
+            if tcc:
+                extras.append(f"{tcc} tool calls")
+            if r.get("hit_recursion_limit"):
+                extras.append("hit step cap")
+            status = r.get("oracle_status")
+            if status and status != "no_oracle":
+                extras.append(status)
+            extra_str = f" ({', '.join(extras)})" if extras else ""
             lines.append(
-                f"- **{a}** [{mark} {r['verdict']}, {r['latency_seconds']:.1f}s] - "
+                f"- **{a}** [{mark} {r['verdict']}, {r['latency_seconds']:.1f}s]{extra_str} - "
                 f"{r['rationale']}"
             )
             answer = r["agent_answer"].strip().replace("\n", " ")
