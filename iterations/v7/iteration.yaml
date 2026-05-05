@@ -1,0 +1,17 @@
+id: v7
+created_at: 2026-05-05T10:24:12Z
+parent: v6
+run_id: 20260505T095819Z-6f3566
+agents:
+  - rag
+  - graph
+  - pageindex
+question_count: 30
+summary: "Introduces PageIndex (vectorless tree-of-contents reasoning RAG) as a third indexing/retrieval paradigm alongside chunk-RAG and graph-RAG. RAG and Graph held fixed at v6. Headline RAG 0.47 / Graph 0.67 / PageIndex 0.62. PageIndex wins aggregation_count (0.62 vs 0.38 vs 0.12; first non-graph cell win across seven iterations) and one_hop (0.90, including a clean correct on the v1-v6 gold-002 extraction_miss); ties graph on dependency_chain (0.88) and shared_neighbor (0.88); collapses on multi_hop_2 (0.20 vs 0.90) where structured edges beat navigated free-text on join-shaped questions. Adoption: 129 get_section_content calls touching 30 of 30 rows. Latency: PageIndex slowest (mean 13.83s, p95 26.22s) - 5 rows hit the 24-step recursion cap on multi-hop joins. Attribution: RAG 10/20/0/0, Graph 18/11/1/0, PageIndex 15/15/0/0. Run metadata 20260505T095819Z-6f3566."
+changes:
+  - "pageindex/index.py + store.py: new module. Concatenates the 41-file corpus into a single markdown buffer (each filename promoted to a top-level # heading; pre-existing headings demoted by one level), parses it with a header-walk into a 454-node tree (42 roots, 313 leaves, 141 internal), attaches LLM summaries (1-2 sentences for leaves, one-sentence prefix for parents), persists as JSON. PageIndexStore loads the JSON and exposes metadata / structure / per-section-text helpers. Re-implements VectifyAI/PageIndex md_to_tree without the heavy upstream deps (litellm, pymupdf)."
+  - "agents/pageindex_agent.py: new LangGraph ReAct agent symmetric to RAGAgent and GraphAgent (same BASE_PERSONA, same scratchpad, same ask/ask_with_trace shape, 24-step recursion cap). Three retrieval tools mirror PageIndex canonical agentic example: get_document, get_document_structure (titles+summaries+node_ids, no body), get_section_content(node_id)."
+  - "eval/run.py + trace.py + report.py: AgentName Literal extends to rag|graph|pageindex; PageIndexAgent registered in runners. New pageindex_section_calls counter on TurnResult and AgentTraceSummary, paradigm-symmetric to v5 aliases_used_calls and v6 set_difference_calls. Report adds a get_section_content adoption section."
+  - "main.py: new build-pageindex Typer subcommand; --agent both/all reinterpreted as the three-way set; chat command extended to accept pageindex."
+  - "config.py: PAGEINDEX_TREE_PATH env-overridable, defaults to knowledge_sources/pageindex_tree.json."
+  - "paper.md: new v7 changelog and abstract; section 2.2 gains a PageIndex pipeline bullet; section 3 results extended to three-way; new section 9 paradigm comparison; conclusion rewritten for three paradigms."

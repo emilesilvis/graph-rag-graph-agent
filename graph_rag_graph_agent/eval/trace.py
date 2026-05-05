@@ -35,6 +35,10 @@ _ALIAS_SIGNAL_RE = re.compile(r"aliases unioned:|aliases of '")
 # to the alias signal above; lets the report quantify lever-1 adoption
 # for v6 the way v5 quantifies it for alias unioning.
 _SET_DIFF_SIGNAL_RE = re.compile(r"^set_difference:", re.MULTILINE)
+# v7: count get_section_content invocations as the PageIndex paradigm's
+# adoption signal - the analogue of v5's alias-folded calls and v6's
+# set_difference calls.
+_PAGEINDEX_SECTION_TOOL = "get_section_content"
 
 
 @dataclass
@@ -73,6 +77,12 @@ class AgentTraceSummary:
     # error outputs - the marker fires on every non-cap-error invocation -
     # so the report can show adoption per question.
     set_difference_calls: int = 0
+    # v7 instrumentation: count `get_section_content` calls (the PageIndex
+    # agent's body-text-fetch tool). Paradigm-symmetric to v5's
+    # aliases_used_calls and v6's set_difference_calls - lets the report
+    # quantify how many sections the PageIndex agent navigated to per
+    # question.
+    pageindex_section_calls: int = 0
 
 
 def _summarise_args(args: Any) -> str:
@@ -189,6 +199,7 @@ def extract_trace(
     hit_recursion_limit = False
     aliases_used_calls = 0
     set_difference_calls = 0
+    pageindex_section_calls = 0
 
     tool_index = 0
     for msg in messages:
@@ -248,6 +259,9 @@ def extract_trace(
             if info["name"] == "set_difference" and _SET_DIFF_SIGNAL_RE.search(output):
                 set_difference_calls += 1
 
+            if info["name"] == _PAGEINDEX_SECTION_TOOL:
+                pageindex_section_calls += 1
+
             if step_at_first_relevant_match is None and _expected_entity_appears(
                 output, expected_entities
             ):
@@ -269,6 +283,7 @@ def extract_trace(
         step_at_first_relevant_match=step_at_first_relevant_match,
         aliases_used_calls=aliases_used_calls,
         set_difference_calls=set_difference_calls,
+        pageindex_section_calls=pageindex_section_calls,
     )
 
 

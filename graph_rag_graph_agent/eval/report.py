@@ -234,6 +234,38 @@ def write_report(
             lines.append(f"| `{qid}` | {cat} | {n} |")
         lines.append("")
 
+    # --- get_section_content adoption (pageindex only, v7) -----------------
+    pi_rows: list[tuple[str, str, int]] = []
+    for r in results:
+        if r["agent"] != "pageindex":
+            continue
+        n_pi = int(r.get("pageindex_section_calls", 0) or 0)
+        if n_pi > 0:
+            pi_rows.append((r["question_id"], r["category"], n_pi))
+    if pi_rows:
+        total_pi_calls = sum(n for _, _, n in pi_rows)
+        lines.append("## `get_section_content` adoption (pageindex agent, v7)")
+        lines.append("")
+        lines.append(
+            "Number of `get_section_content(node_id)` tool invocations per "
+            "question. Quantifies how many tree nodes the PageIndex agent "
+            "navigated to before answering - paradigm-symmetric to v6's "
+            "`set_difference` adoption section and v5's alias-folded calls."
+        )
+        lines.append("")
+        lines.append(
+            f"Total `get_section_content` calls across all questions: "
+            f"**{total_pi_calls}** (touched {len(pi_rows)} of "
+            f"{sum(1 for r in results if r['agent'] == 'pageindex')} "
+            f"pageindex rows)."
+        )
+        lines.append("")
+        lines.append("| Question | Category | section calls |")
+        lines.append("| --- | --- | --- |")
+        for qid, cat, n in pi_rows:
+            lines.append(f"| `{qid}` | {cat} | {n} |")
+        lines.append("")
+
     # --- alias-folded tool calls (graph only, v5) --------------------------
     alias_rows: list[tuple[str, str, int]] = []
     for r in results:

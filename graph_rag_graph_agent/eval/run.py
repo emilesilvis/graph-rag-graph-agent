@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from graph_rag_graph_agent.agents.memory import reset_scratchpad
 from graph_rag_graph_agent.agents.graph_agent import GraphAgent
+from graph_rag_graph_agent.agents.pageindex_agent import PageIndexAgent
 from graph_rag_graph_agent.agents.rag_agent import RAGAgent
 from graph_rag_graph_agent.graph.tools import reset_reach_state
 from graph_rag_graph_agent.config import (
@@ -38,7 +39,7 @@ from graph_rag_graph_agent.eval.trace import (
 
 console = Console()
 
-AgentName = Literal["rag", "graph"]
+AgentName = Literal["rag", "graph", "pageindex"]
 
 
 @dataclass
@@ -68,6 +69,7 @@ class TurnResult:
     find_rel_types_like_calls: dict[str, bool] = field(default_factory=dict)
     aliases_used_calls: int = 0
     set_difference_calls: int = 0
+    pageindex_section_calls: int = 0
     trace: dict[str, Any] = field(default_factory=dict)
 
 
@@ -99,11 +101,13 @@ def run_eval(
         f"({len(questions)} questions x {len(agents)} agents)"
     )
 
-    runners: dict[AgentName, RAGAgent | GraphAgent] = {}
+    runners: dict[AgentName, RAGAgent | GraphAgent | PageIndexAgent] = {}
     if "rag" in agents:
         runners["rag"] = RAGAgent(config)
     if "graph" in agents:
         runners["graph"] = GraphAgent(config)
+    if "pageindex" in agents:
+        runners["pageindex"] = PageIndexAgent(config)
 
     judge = Judge(config)
 
@@ -195,6 +199,7 @@ def run_eval(
                     find_rel_types_like_calls=dict(trace.find_rel_types_like_calls),
                     aliases_used_calls=trace.aliases_used_calls,
                     set_difference_calls=trace.set_difference_calls,
+                    pageindex_section_calls=trace.pageindex_section_calls,
                     trace=trace_to_dict(trace),
                 )
             )

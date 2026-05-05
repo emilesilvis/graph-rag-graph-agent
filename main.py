@@ -54,6 +54,26 @@ def load_graph(
     _load(reset=reset)
 
 
+@app.command("build-pageindex")
+def build_pageindex(
+    rebuild: bool = typer.Option(
+        True,
+        "--rebuild/--no-rebuild",
+        help="If true (default), regenerate the tree even if one exists.",
+    ),
+    summaries: bool = typer.Option(
+        True,
+        "--summaries/--no-summaries",
+        help="If true (default), call the LLM to attach per-node summaries. "
+        "Disable for a fast structure-only build (debug).",
+    ),
+) -> None:
+    """Build the PageIndex tree from knowledge_sources/*.md."""
+    from graph_rag_graph_agent.pageindex.index import build_tree
+
+    build_tree(rebuild=rebuild, add_summaries=summaries)
+
+
 @app.command("generate-eval")
 def generate_eval(
     n: int = typer.Option(25, "--n", help="Approximate total number of questions."),
@@ -70,7 +90,9 @@ def eval_cmd(
     agent: str = typer.Option(
         "both",
         "--agent",
-        help="Which agent(s) to run: rag | graph | both.",
+        help="Which agent(s) to run: rag | graph | pageindex | both | all. "
+        "'both' is retained as an alias for 'all' (= rag, graph, pageindex) "
+        "for backwards compatibility with v6 scripts.",
     ),
     limit: Optional[int] = typer.Option(
         None, "--limit", help="Optional cap on number of questions to run (debug)."
@@ -88,12 +110,14 @@ def eval_cmd(
     from graph_rag_graph_agent.eval.run import run_eval
 
     agent_choice = agent.lower().strip()
-    if agent_choice == "both":
-        agents = ["rag", "graph"]
-    elif agent_choice in {"rag", "graph"}:
+    if agent_choice in {"both", "all"}:
+        agents = ["rag", "graph", "pageindex"]
+    elif agent_choice in {"rag", "graph", "pageindex"}:
         agents = [agent_choice]  # type: ignore[list-item]
     else:
-        raise typer.BadParameter("--agent must be one of rag | graph | both")
+        raise typer.BadParameter(
+            "--agent must be one of rag | graph | pageindex | both | all"
+        )
 
     questions = load_questions(questions_path)
     if limit is not None:
@@ -123,8 +147,13 @@ def chat(
 
         runner = GraphAgent()
         label = "Graph agent"
+    elif agent_choice == "pageindex":
+        from graph_rag_graph_agent.agents.pageindex_agent import PageIndexAgent
+
+        runner = PageIndexAgent()
+        label = "PageIndex agent"
     else:
-        raise typer.BadParameter("--agent must be rag | graph")
+        raise typer.BadParameter("--agent must be rag | graph | pageindex")
 
     thread_id = "chat-session"
     console.print(
@@ -210,21 +239,38 @@ def new_iteration(
     from_paper: Optional[Path] = typer.Option(
         None,
         "--from-paper",
-        help="Path to a paper.md to snapshot. Defaults to the parent "
-        "iteration's paper.md, or repo-root paper.md if no parent.",
+        help="Path to a paper.md to snapshot. Defaults to repo-root "
+        "paper.md (the live working copy you've been editing this "
+        "iteration). Pass an explicit path here ONLY if you want to "
+        "snapshot something other than the root - e.g. the parent "
+        "iteration's paper to start the new iteration from a clean "
+        "v(N-1) baseline.",
     ),
 ) -> None:
     """Freeze an eval run + paper.md into iterations/<id>/.
 
     This is the only supported way to promote scratch eval output into Git.
-    Behaviour (see plan file for full policy):
+
+    Intended workflow:
+      0. (Outside this command) Edit repo-root `paper.md` with the
+         current iteration's changelog, abstract, results, and
+         discussion based on the eval run you're about to freeze.
+      1. Run `new-iteration --id v<N> --run-id <run_id>` to freeze.
+
+    Behaviour:
       1. Create iterations/<id>/ (refuses if it exists).
       2. Copy eval_runs/<run_id>.json into iterations/<id>/eval_run.json.
       3. Render eval_report.md for that run into iterations/<id>/.
-      4. Copy the chosen paper.md into iterations/<id>/.
+      4. Copy the chosen paper.md into iterations/<id>/. Default source
+         is repo-root paper.md (the live working copy). The parent
+         iteration's paper.md is NOT the default - it's already
+         preserved at iterations/<parent>/paper.md and snapshotting
+         from it would silently discard the in-progress edits to root.
       5. Write iteration.yaml metadata.
       6. Update iterations/latest symlink.
-      7. Copy iterations/<id>/paper.md back to repo-root paper.md.
+      7. Copy iterations/<id>/paper.md back to repo-root paper.md
+         (no-op when default source was root, but keeps the
+         explicit-from-paper flow round-tripping cleanly).
     """
     from graph_rag_graph_agent.config import EVAL_RUNS_DIR, PROJECT_ROOT
     from graph_rag_graph_agent.eval.report import write_report
@@ -249,15 +295,20 @@ def new_iteration(
             parent = latest.resolve().name
 
     if from_paper is None:
-        if parent is not None:
-            candidate = iterations_dir / parent / "paper.md"
-            if candidate.exists():
-                from_paper = candidate
-        if from_paper is None:
-            from_paper = PROJECT_ROOT / "paper.md"
+        # Default to repo-root paper.md - the "live" working copy the
+        # user has been editing during this iteration. Falling back to
+        # the parent's paper.md (as previous versions of this command
+        # did) silently discards in-progress root edits, so we now
+        # require the user to opt-in to that flow via --from-paper.
+        from_paper = PROJECT_ROOT / "paper.md"
     from_paper = from_paper.resolve()
     if not from_paper.exists():
-        raise typer.BadParameter(f"Source paper not found: {from_paper}")
+        raise typer.BadParameter(
+            f"Source paper not found: {from_paper}. "
+            f"Edit paper.md with this iteration's content first, or "
+            f"pass --from-paper iterations/<parent>/paper.md to start "
+            f"from the previous iteration's snapshot."
+        )
 
     target_dir.mkdir(parents=True)
     shutil.copy2(run_path, target_dir / "eval_run.json")

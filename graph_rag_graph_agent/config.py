@@ -30,6 +30,9 @@ def _path_env(name: str, default: Path) -> Path:
 KNOWLEDGE_DIR = _path_env("KNOWLEDGE_DIR", PROJECT_ROOT / "knowledge_sources")
 GRAPH_CYPHER_PATH = _path_env("GRAPH_CYPHER_PATH", KNOWLEDGE_DIR / "graph.cypher")
 CHROMA_DIR = _path_env("CHROMA_DIR", PROJECT_ROOT / ".chroma")
+PAGEINDEX_TREE_PATH = _path_env(
+    "PAGEINDEX_TREE_PATH", KNOWLEDGE_DIR / "pageindex_tree.json"
+)
 
 EVAL_DIR = PROJECT_ROOT / "graph_rag_graph_agent" / "eval"
 EVAL_QUESTIONS_PATH = EVAL_DIR / "questions.yaml"
