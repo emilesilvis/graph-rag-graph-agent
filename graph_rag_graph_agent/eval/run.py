@@ -18,6 +18,7 @@ from graph_rag_graph_agent.agents.memory import reset_scratchpad
 from graph_rag_graph_agent.agents.graph_agent import GraphAgent
 from graph_rag_graph_agent.agents.pageindex_agent import PageIndexAgent
 from graph_rag_graph_agent.agents.rag_agent import RAGAgent
+from graph_rag_graph_agent.agents.router_agent import RouterAgent
 from graph_rag_graph_agent.graph.tools import reset_reach_state
 from graph_rag_graph_agent.config import (
     EVAL_RUNS_DIR,
@@ -39,7 +40,7 @@ from graph_rag_graph_agent.eval.trace import (
 
 console = Console()
 
-AgentName = Literal["rag", "graph", "pageindex"]
+AgentName = Literal["rag", "graph", "pageindex", "router"]
 
 
 @dataclass
@@ -70,6 +71,8 @@ class TurnResult:
     aliases_used_calls: int = 0
     set_difference_calls: int = 0
     pageindex_section_calls: int = 0
+    router_calls: dict[str, int] = field(default_factory=dict)
+    router_primary: str | None = None
     trace: dict[str, Any] = field(default_factory=dict)
 
 
@@ -101,13 +104,32 @@ def run_eval(
         f"({len(questions)} questions x {len(agents)} agents)"
     )
 
-    runners: dict[AgentName, RAGAgent | GraphAgent | PageIndexAgent] = {}
+    runners: dict[AgentName, RAGAgent | GraphAgent | PageIndexAgent | RouterAgent] = {}
     if "rag" in agents:
         runners["rag"] = RAGAgent(config)
     if "graph" in agents:
         runners["graph"] = GraphAgent(config)
     if "pageindex" in agents:
         runners["pageindex"] = PageIndexAgent(config)
+    if "router" in agents:
+        # Router needs all three sub-agents. Reuse already-built ones if
+        # present so we don't double-pay the (cheap but non-zero) init
+        # cost; build any missing ones here.
+        rag_sub = runners.get("rag") if isinstance(runners.get("rag"), RAGAgent) else None
+        graph_sub = (
+            runners.get("graph") if isinstance(runners.get("graph"), GraphAgent) else None
+        )
+        pi_sub = (
+            runners.get("pageindex")
+            if isinstance(runners.get("pageindex"), PageIndexAgent)
+            else None
+        )
+        runners["router"] = RouterAgent(
+            config=config,
+            rag=rag_sub or RAGAgent(config),
+            graph=graph_sub or GraphAgent(config),
+            pageindex=pi_sub or PageIndexAgent(config),
+        )
 
     judge = Judge(config)
 
@@ -200,6 +222,8 @@ def run_eval(
                     aliases_used_calls=trace.aliases_used_calls,
                     set_difference_calls=trace.set_difference_calls,
                     pageindex_section_calls=trace.pageindex_section_calls,
+                    router_calls=dict(trace.router_calls),
+                    router_primary=trace.router_primary,
                     trace=trace_to_dict(trace),
                 )
             )

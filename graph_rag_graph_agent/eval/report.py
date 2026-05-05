@@ -266,6 +266,60 @@ def write_report(
             lines.append(f"| `{qid}` | {cat} | {n} |")
         lines.append("")
 
+    # --- router paradigm selection (router only, v8) -----------------------
+    router_rows: list[tuple[str, str, dict[str, int], str | None]] = []
+    for r in results:
+        if r["agent"] != "router":
+            continue
+        calls_raw = r.get("router_calls") or {}
+        calls = {k: int(calls_raw.get(k, 0) or 0) for k in ("rag", "graph", "pageindex")}
+        primary = r.get("router_primary")
+        if any(calls.values()) or primary:
+            router_rows.append((r["question_id"], r["category"], calls, primary))
+    if router_rows:
+        primary_totals: dict[str, int] = {"rag": 0, "graph": 0, "pageindex": 0}
+        none_primary = 0
+        for _, _, _, primary in router_rows:
+            if primary in primary_totals:
+                primary_totals[primary] += 1
+            else:
+                none_primary += 1
+        total_router_rows = sum(1 for r in results if r["agent"] == "router")
+        lines.append("## Router paradigm selection (v8)")
+        lines.append("")
+        lines.append(
+            "Which sub-agent paradigm the router (`ask_rag` / `ask_graph` "
+            "/ `ask_pageindex`) consulted per question. `primary` is the "
+            "first paradigm called on that question; the per-paradigm "
+            "columns count how many times each was invoked (the router "
+            "may consult more than one). Paradigm-symmetric to v6's "
+            "`set_difference` adoption section and v7's "
+            "`get_section_content` adoption section."
+        )
+        lines.append("")
+        primary_summary = (
+            f"rag={primary_totals['rag']}, "
+            f"graph={primary_totals['graph']}, "
+            f"pageindex={primary_totals['pageindex']}"
+        )
+        if none_primary:
+            primary_summary += f", none={none_primary}"
+        lines.append(
+            f"Primary paradigm picks across {total_router_rows} router "
+            f"rows: **{primary_summary}**."
+        )
+        lines.append("")
+        lines.append(
+            "| Question | Category | Primary | rag | graph | pageindex |"
+        )
+        lines.append("| --- | --- | --- | --- | --- | --- |")
+        for qid, cat, calls, primary in router_rows:
+            lines.append(
+                f"| `{qid}` | {cat} | {primary or '-'} | "
+                f"{calls['rag']} | {calls['graph']} | {calls['pageindex']} |"
+            )
+        lines.append("")
+
     # --- alias-folded tool calls (graph only, v5) --------------------------
     alias_rows: list[tuple[str, str, int]] = []
     for r in results:

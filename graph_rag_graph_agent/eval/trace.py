@@ -39,6 +39,15 @@ _SET_DIFF_SIGNAL_RE = re.compile(r"^set_difference:", re.MULTILINE)
 # adoption signal - the analogue of v5's alias-folded calls and v6's
 # set_difference calls.
 _PAGEINDEX_SECTION_TOOL = "get_section_content"
+# v8: router-agent sub-agent delegation tools. Each call records the
+# paradigm the meta-router chose for that turn. `router_primary` is the
+# paradigm the router consulted FIRST (a coarse "router picked X" signal
+# for the report), while `router_calls` is the full per-paradigm tally.
+_ROUTER_TOOL_TO_PARADIGM = {
+    "ask_rag": "rag",
+    "ask_graph": "graph",
+    "ask_pageindex": "pageindex",
+}
 
 
 @dataclass
@@ -83,6 +92,13 @@ class AgentTraceSummary:
     # quantify how many sections the PageIndex agent navigated to per
     # question.
     pageindex_section_calls: int = 0
+    # v8 instrumentation: per-paradigm sub-agent delegation counts from
+    # the router agent's ReAct loop. `router_calls` keys are
+    # {"rag", "graph", "pageindex"}; `router_primary` is the first
+    # paradigm consulted on the question (None if the router didn't
+    # call any sub-agent, e.g. a refusal or scratchpad-only turn).
+    router_calls: dict[str, int] = field(default_factory=dict)
+    router_primary: str | None = None
 
 
 def _summarise_args(args: Any) -> str:
@@ -200,6 +216,8 @@ def extract_trace(
     aliases_used_calls = 0
     set_difference_calls = 0
     pageindex_section_calls = 0
+    router_calls: dict[str, int] = {"rag": 0, "graph": 0, "pageindex": 0}
+    router_primary: str | None = None
 
     tool_index = 0
     for msg in messages:
@@ -262,6 +280,12 @@ def extract_trace(
             if info["name"] == _PAGEINDEX_SECTION_TOOL:
                 pageindex_section_calls += 1
 
+            paradigm = _ROUTER_TOOL_TO_PARADIGM.get(info["name"])
+            if paradigm is not None:
+                router_calls[paradigm] += 1
+                if router_primary is None:
+                    router_primary = paradigm
+
             if step_at_first_relevant_match is None and _expected_entity_appears(
                 output, expected_entities
             ):
@@ -284,6 +308,8 @@ def extract_trace(
         aliases_used_calls=aliases_used_calls,
         set_difference_calls=set_difference_calls,
         pageindex_section_calls=pageindex_section_calls,
+        router_calls=router_calls,
+        router_primary=router_primary,
     )
 
 

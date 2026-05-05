@@ -90,8 +90,8 @@ def eval_cmd(
     agent: str = typer.Option(
         "both",
         "--agent",
-        help="Which agent(s) to run: rag | graph | pageindex | both | all. "
-        "'both' is retained as an alias for 'all' (= rag, graph, pageindex) "
+        help="Which agent(s) to run: rag | graph | pageindex | router | both | all. "
+        "'both' is retained as an alias for 'all' (= rag, graph, pageindex, router) "
         "for backwards compatibility with v6 scripts.",
     ),
     limit: Optional[int] = typer.Option(
@@ -111,12 +111,12 @@ def eval_cmd(
 
     agent_choice = agent.lower().strip()
     if agent_choice in {"both", "all"}:
-        agents = ["rag", "graph", "pageindex"]
-    elif agent_choice in {"rag", "graph", "pageindex"}:
+        agents = ["rag", "graph", "pageindex", "router"]
+    elif agent_choice in {"rag", "graph", "pageindex", "router"}:
         agents = [agent_choice]  # type: ignore[list-item]
     else:
         raise typer.BadParameter(
-            "--agent must be one of rag | graph | pageindex | both | all"
+            "--agent must be one of rag | graph | pageindex | router | both | all"
         )
 
     questions = load_questions(questions_path)
@@ -152,8 +152,13 @@ def chat(
 
         runner = PageIndexAgent()
         label = "PageIndex agent"
+    elif agent_choice == "router":
+        from graph_rag_graph_agent.agents.router_agent import RouterAgent
+
+        runner = RouterAgent()
+        label = "Router agent"
     else:
-        raise typer.BadParameter("--agent must be rag | graph | pageindex")
+        raise typer.BadParameter("--agent must be rag | graph | pageindex | router")
 
     thread_id = "chat-session"
     console.print(
