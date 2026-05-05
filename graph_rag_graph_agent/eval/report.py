@@ -202,6 +202,71 @@ def write_report(
             lines.append("| " + " | ".join(tot_row) + " |")
             lines.append("")
 
+    # --- set_difference adoption (graph only, v6) --------------------------
+    sd_rows: list[tuple[str, str, int]] = []
+    for r in results:
+        if r["agent"] != "graph":
+            continue
+        n_sd = int(r.get("set_difference_calls", 0) or 0)
+        if n_sd > 0:
+            sd_rows.append((r["question_id"], r["category"], n_sd))
+    if sd_rows:
+        total_sd_calls = sum(n for _, _, n in sd_rows)
+        lines.append("## `set_difference` adoption (graph agent, v6)")
+        lines.append("")
+        lines.append(
+            "Number of `set_difference(candidate_cypher, exclude_cypher)` "
+            "tool invocations that produced a populated diff (rather than "
+            "an error). Quantifies how often v6's lever 1 (negation guard "
+            "rail) actually fired - paradigm-symmetric to v5's "
+            "alias-folded calls and v3's `find_rel_types_like` coverage."
+        )
+        lines.append("")
+        lines.append(
+            f"Total `set_difference` calls across all questions: "
+            f"**{total_sd_calls}** (touched {len(sd_rows)} of "
+            f"{sum(1 for r in results if r['agent'] == 'graph')} graph rows)."
+        )
+        lines.append("")
+        lines.append("| Question | Category | set_difference calls |")
+        lines.append("| --- | --- | --- |")
+        for qid, cat, n in sd_rows:
+            lines.append(f"| `{qid}` | {cat} | {n} |")
+        lines.append("")
+
+    # --- alias-folded tool calls (graph only, v5) --------------------------
+    alias_rows: list[tuple[str, str, int]] = []
+    for r in results:
+        if r["agent"] != "graph":
+            continue
+        n_alias = int(r.get("aliases_used_calls", 0) or 0)
+        if n_alias > 0:
+            alias_rows.append((r["question_id"], r["category"], n_alias))
+    if alias_rows:
+        total_alias_calls = sum(n for _, _, n in alias_rows)
+        lines.append("## Alias-folded tool calls (graph agent, v5)")
+        lines.append("")
+        lines.append(
+            "Number of `reach` / `neighbourhood` / `resolve_entity` calls "
+            "where two or more node-name spellings (alias siblings, e.g. "
+            "`Auth Service` + `Authentication Service`) were unioned in "
+            "the result. Quantifies how often v5's lever 1 (tool-level "
+            "alias resolution) actually fired."
+        )
+        lines.append("")
+        lines.append(
+            f"Total alias-folded tool calls across all questions: "
+            f"**{total_alias_calls}** "
+            f"(touched {len(alias_rows)} of "
+            f"{sum(1 for r in results if r['agent'] == 'graph')} graph rows)."
+        )
+        lines.append("")
+        lines.append("| Question | Category | alias-folded calls |")
+        lines.append("| --- | --- | --- |")
+        for qid, cat, n in alias_rows:
+            lines.append(f"| `{qid}` | {cat} | {n} |")
+        lines.append("")
+
     # --- find_rel_types_like coverage (graph only, v3) ---------------------
     coverage_rows: list[tuple[str, list[str], dict[str, bool]]] = []
     for r in results:
@@ -257,6 +322,16 @@ def write_report(
         if any_row.get("oracle_has_oracle"):
             ocount = any_row.get("oracle_row_count", 0)
             lines.append(f"**Oracle Cypher rows:** {ocount}")
+            enumeration = any_row.get("oracle_enumeration")
+            if enumeration:
+                # v6: surface the oracle's collect()-based enumeration so
+                # aggregate-question failures (e.g. gold-025 partial 5/9
+                # teams) are immediately attributable to extraction or
+                # to agent reasoning by inspection.
+                lines.append(
+                    f"**Oracle enumeration ({len(enumeration)}):** "
+                    + ", ".join(enumeration)
+                )
             lines.append("")
         elif any_row.get("oracle_cypher") is not None and (
             "oracle_has_oracle" in any_row

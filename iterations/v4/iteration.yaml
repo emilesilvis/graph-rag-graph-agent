@@ -1,0 +1,14 @@
+id: v4
+created_at: 2026-05-02T14:11:00Z
+parent: v3
+run_id: 20260502T135653Z-3202a9
+agents:
+  - rag
+  - graph
+question_count: 30
+summary: "First behaviour-changing iteration after v3 diagnostics. Three paradigm-symmetric levers: schema-time concept clusters via embedding-based union-find (single-link, cosine 0.70); a `reach(entity, concept, direction, depth)` tool that builds rel-type unions and runs variable-length Cypher in one call (with code-enforced 4-call cap to prevent loop pathology); and a preflight NOTE on bare `[*N..M]` paths. Overall flat within run-to-run noise (graph 0.70/0.72, RAG 0.45/0.47). Per-cell: shared_neighbor 0.88->1.00, multi_hop_2 0.80->0.90 (clean wins) traded against multi_hop_3 1.00->0.75 (mixed-concept hops the embedding matcher cannot disambiguate) and dependency_chain 0.50->0.38. Attribution moves 19/10/1 to 20/9/1. The behavioural lesson dominates the score story: agent enthusiastically adopted `reach` (27/165 graph tool calls = 16%), required code cap after first attempt regressed to 0.53 due to 16-call reach loops on a single question."
+changes:
+  - "graph/schema.py: embedding-clustered concept clusters surfaced in schema dump (single-link union-find at cosine 0.70, 35 multi-clusters on 233 rel types). Query-time union_for_concept at threshold 0.55 catches cross-cluster near-synonyms."
+  - "graph/tools.py: new reach(entity_name, concept, direction, depth) tool. Embeds concept, finds rel-type union, runs variable-length Cypher in one call. Per-thread cap of 4 calls."
+  - "graph/tools.py: preflight NOTE on bare [*N..M] variable-length paths."
+  - "agents/graph_agent.py: prompt updated to reference Concept clusters and the reach tool, with explicit narrow criteria (transitive only) and the rel-type-union-fidelity rule from v3 gold-019."

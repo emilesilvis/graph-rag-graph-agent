@@ -17,6 +17,7 @@ from tqdm import tqdm
 from graph_rag_graph_agent.agents.memory import reset_scratchpad
 from graph_rag_graph_agent.agents.graph_agent import GraphAgent
 from graph_rag_graph_agent.agents.rag_agent import RAGAgent
+from graph_rag_graph_agent.graph.tools import reset_reach_state
 from graph_rag_graph_agent.config import (
     EVAL_RUNS_DIR,
     Config,
@@ -60,10 +61,13 @@ class TurnResult:
     oracle_has_oracle: bool = False
     oracle_error: str | None = None
     oracle_status: str = "no_oracle"
+    oracle_enumeration: list[str] | None = None
     tool_call_count: int = 0
     hit_recursion_limit: bool = False
     step_at_first_relevant_match: int | None = None
     find_rel_types_like_calls: dict[str, bool] = field(default_factory=dict)
+    aliases_used_calls: int = 0
+    set_difference_calls: int = 0
     trace: dict[str, Any] = field(default_factory=dict)
 
 
@@ -125,6 +129,7 @@ def run_eval(
         for agent_name in agents:
             thread_id = f"{run_id}-{agent_name}-{q.id}"
             reset_scratchpad(thread_id)
+            reset_reach_state(thread_id)
             runner = runners[agent_name]
             start = time.perf_counter()
             error: str | None = None
@@ -179,10 +184,17 @@ def run_eval(
                     oracle_has_oracle=oracle.has_oracle,
                     oracle_error=oracle.error,
                     oracle_status=oracle_status,
+                    oracle_enumeration=(
+                        list(oracle.enumeration)
+                        if oracle.enumeration is not None
+                        else None
+                    ),
                     tool_call_count=trace.tool_call_count,
                     hit_recursion_limit=trace.hit_recursion_limit,
                     step_at_first_relevant_match=trace.step_at_first_relevant_match,
                     find_rel_types_like_calls=dict(trace.find_rel_types_like_calls),
+                    aliases_used_calls=trace.aliases_used_calls,
+                    set_difference_calls=trace.set_difference_calls,
                     trace=trace_to_dict(trace),
                 )
             )

@@ -1,0 +1,15 @@
+id: v5
+created_at: 2026-05-03T10:46:49Z
+parent: v4
+run_id: 20260503T103231Z-c5145a
+agents:
+  - rag
+  - graph
+question_count: 30
+summary: "Acts on v4 §6.5: tool-level alias-aware entity resolution (resolve_entity / reach / neighbourhood union over alias siblings via normalised key + difflib fallback - 52 alias-folded calls touching 22 of 30 graph rows), tighter reach (per-entity zero-match short-circuit, optional name_filter, broadness/coherence-spread NOTEs), prompt routing for mixed-concept multi_hop_3 with explicit gold-016 anti-example. Headline graph 0.70 vs RAG 0.40 (v4 0.70/0.45). Per-cell: dependency_chain 0.38 -> 1.00 (clean lever-1 win, gold-019 + gold-010 both flip), shared_neighbor 1.00 (held), one_hop 0.80 (held), aggregation_count 0.50 (held), multi_hop_2 0.90 -> 0.60 (2 quota fails of 5), multi_hop_3 0.75 (1 quota fail of 4), negation 0.50 -> 0.25 (1 quota fail + real losses). Attribution 19/10/1 (v4 20/9/1). Quota artifact: 4 graph rows hit OpenAI rate limit mid-run; without those v5 reads ~0.78."
+changes:
+  - "graph/tools.py: alias-aware entity resolution. _alias_siblings helper + normalised key + difflib 0.85 fallback; resolve_entity surfaces aliases line; reach/neighbourhood union via e.name IN $names"
+  - "graph/tools.py: tighter reach. Per-entity zero-match short-circuit, optional name_filter substring, broadness warning at >8 spellings, coherence-spread warning at min pairwise cosine <0.70"
+  - "graph/schema.py: new min_pairwise_cosine method on GraphSchema for the coherence-spread warning"
+  - "agents/graph_agent.py: prompt updates for alias folding, zero-match rule, name_filter, coherence NOTE handling, explicit gold-016 anti-example for 3-hop mixed-concept chains"
+  - "eval/trace.py + run.py + report.py: aliases_used_calls per question + new report section quantifying lever 1 adoption (52 calls / 22 rows in this run)"

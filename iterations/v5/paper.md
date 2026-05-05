@@ -1,42 +1,5 @@
 # Automated Chunk-RAG vs. Automated Graph-RAG: A Controlled Comparison over a Shared Markdown Corpus
 
-## Changelog (v6)
-
-- graph/tools.py: **`set_difference(candidate_cypher, exclude_cypher,
-  key='name')`** tool. Negation guard rail (lever 1 from v5 §7.6).
-  Runs both queries read-only, computes the candidate-set minus
-  exclude-set, returns the diff with both source-set sizes and the
-  overlap explicitly visible (`set_difference: 8 candidates - 5
-  excluded (overlap) = 3 in result`). The recipe — "compute
-  candidates, compute exclude set, subtract" — was already in v5's
-  prompt as prose, but v5 traces showed the agent kept writing
-  single-spelling `NOT EXISTS { -[:REL_TYPE]-> }` filters that
-  silently match nothing on KGGen's synonymous rel-type vocabulary
-  and hand back the entire candidate set as "the answer". The tool
-  forces the recipe into a single ReAct turn with a code-enforced
-  cap of 3 calls per question. Paradigm-symmetric to how v4's
-  `reach` upgraded the v3 transitive recipe from prose to tool.
-- agents/graph_agent.py: prompt rewrites the negation few-shot to
-  route through `set_difference` with explicit instructions that
-  the EXCLUDE Cypher's `WHERE type(r) IN [...]` must contain EVERY
-  spelling from `find_rel_types_like` / Concept clusters, never a
-  single rel type. The fallback "manual subtraction with hard-coded
-  name list" recipe is retained for rare shapes.
-- eval/oracle.py: oracle now extracts `collect(...)` columns from
-  seed-Cypher results into `OracleResult.enumeration`. The report
-  surfaces this as `Oracle enumeration (N): name1, name2, ...`
-  alongside the per-question detail. Lets the reader distinguish
-  "extraction has all 9 teams but the agent only enumerated 5"
-  (agent_miss) from "extraction only has 5 of 9 teams"
-  (extraction_miss in disguise) without re-running the seed by
-  hand. v6 §8.3 uses this to falsify three suspected
-  extraction_miss-in-disguise rows in the aggregation cell.
-- eval/trace.py + eval/run.py + eval/report.py: new
-  `set_difference_calls` per-question counter + a new report
-  section quantifying lever 1 adoption (16 calls / 8 of 30 graph
-  rows in this run), paradigm-symmetric to the v5 alias-folded
-  calls section and the v3 `find_rel_types_like` coverage section.
-
 ## Changelog (v5)
 
 - graph/tools.py: **alias-aware entity resolution** (lever 1 from v4 §6.5).
@@ -131,49 +94,6 @@
 - graph/tools.py: added find_rel_types_like
 - graph_agent.py: three new few-shots + recipe prose
 - eval_data/shopflow_gold.yaml: +20 questions
-
-**Abstract (v6).** v6 executes the targeted plan v5 §7.6 prescribed:
-one tool-level lever (the `set_difference` negation guard rail), one
-diagnostic add (oracle-enumeration display for aggregation rows),
-and a clean re-run that neutralises the v5 OpenAI-quota artifact.
-Lever 1: a `set_difference(candidate_cypher, exclude_cypher)` tool
-runs both queries in one ReAct turn and returns the diff with both
-source-set sizes and the overlap explicitly visible — the same
-"compute candidates, compute exclude set, subtract" recipe v5 had
-in the prompt as prose, now code-enforced. Adopted on **16 tool
-calls across 8 of 30 graph rows**. The headline negation row
-gold-008 ("which Platform-managed services do NOT depend on Data
-Lineage Service?") cleanly flips from v5 wrong to v6 correct in
-1 set_difference call (5 tool calls / 11s, was a v5 quota fail).
-Headline graph **0.65** vs RAG **0.40** (v5: 0.70 / 0.40). The
-headline drop (-0.05) is dominated by two row-specific costs of
-the new tool: the agent **over-applied** `set_difference` to two
-non-negation questions (gold-021 dependency_chain "which services
-use Redis"; gold-026 aggregation_count "how many in Python") where
-it confused the candidate/exclude logic and flipped previously-
-right answers wrong. Per-cell: **negation 0.25 → 0.38** (gold-008
-clean win), **multi_hop_2 0.60 → 0.90** (the two v5 quota fails
-gold-004/gold-015 ran cleanly and recovered), `dependency_chain
-1.00 → 0.75` (the gold-021 set_difference misuse), `multi_hop_3
-0.75 → 0.50` (gold-018 hit step cap, n=4 noise), `aggregation_count
-0.50 → 0.38` (the gold-026 set_difference misuse), `one_hop 0.80
-→ 0.60` (gold-012 swapped a known-correct cache lookup, n=5 noise),
-`shared_neighbor 1.00` (held). Attribution **18/11/1**
-(v5: 19/10/1), within run-to-run noise. The most informative
-diagnostic finding: oracle enumeration shows the extraction has
-**9/9 teams, 6/6 Python-implementing services, and 3/3 Fraud
-Detection integrations** — falsifying the suspicion that
-aggregation_count failures might be extraction_miss in disguise.
-Every aggregation failure is reasoning-bound, just like negation.
-Three meta-conclusions: (a) the `set_difference` mechanism works
-on its target row but the prompt routing is too broad — v7 should
-restrict it to NEGATION ONLY; (b) the `dependency_chain 0.38 →
-1.00 → 0.75` arc across v4/v5/v6 plus this run's regressions on
-n=4 cells confirms the project is at the noise-floor regime where
-single-row flips dominate cell movement; (c) the v3 oracle
-attribution + v5 alias counter + v6 oracle enumeration together
-now give a complete cell-by-cell attribution chain ready for
-write-up. Run metadata: `20260503T110821Z-1e6867`.
 
 **Abstract (v5).** v5 acts on the three levers v4 §6.5 prescribed,
 all at the tool layer — the raw KGGen graph is unchanged. (a)
@@ -324,128 +244,103 @@ whose expected answers are verifiable in *both* the Markdown and the extracted
 graph. Questions span seven categories: `one_hop`, `multi_hop_2`, `multi_hop_3`,
 `dependency_chain`, `shared_neighbor`, `aggregation_count`, `negation`. An
 LLM-as-judge (`gpt-4o`) grades each response as correct (1), partial (0.5), or
-wrong (0) against the expected answer and the expected key entities. v6 run
-metadata: `20260503T110821Z-1e6867`. v5 run (kept for the comparison columns
-in §3.1): `20260503T103231Z-c5145a`.
+wrong (0) against the expected answer and the expected key entities. v5 run
+metadata: `20260503T103231Z-c5145a`. v4 run (kept for reference and for the
+comparison columns in §3.1): `20260502T135653Z-3202a9`.
 
-## 3. Results (v6 run)
+## 3. Results (v5 run)
 
 ### 3.1 Accuracy by category
 
-Per-category means use **n=4** or **n=5** per cell. v6 introduces one
-tool-level behaviour change (the `set_difference` negation guard rail)
-and one diagnostic add (oracle enumeration for aggregation rows). A
-single-verdict flip in an n=4 cell shifts the cell mean by 0.25, so
-read per-cell movement against that floor.
+Per-category means use **n=4** or **n=5** per cell. v5 introduces three
+tool-level behaviour changes (alias unioning, tighter `reach`,
+prompt-routing for mixed-concept multi-hop). A single-verdict flip in
+an n=4 cell shifts the cell mean by 0.25, so read per-cell movement
+against that floor.
 
-| Category            | RAG (v6)   | RAG (v5)   | Graph (v6)     | Graph (v5)     |
-| ------------------- | ---------- | ---------- | -------------- | -------------- |
-| `one_hop`           | 0.80 (n=5) | 0.80 (n=5) | 0.60 (n=5)     | 0.80 (n=5)     |
-| `multi_hop_2`       | 0.00 (n=5) | 0.00 (n=5) | **0.90** (n=5) | 0.60 (n=5)     |
-| `multi_hop_3`       | 0.25 (n=4) | 0.25 (n=4) | 0.50 (n=4)     | 0.75 (n=4)     |
-| `dependency_chain`  | 0.75 (n=4) | 0.75 (n=4) | 0.75 (n=4)     | **1.00** (n=4) |
-| `shared_neighbor`   | 0.75 (n=4) | 0.75 (n=4) | **1.00** (n=4) | **1.00** (n=4) |
-| `aggregation_count` | 0.00 (n=4) | 0.00 (n=4) | 0.38 (n=4)     | 0.50 (n=4)     |
-| `negation`          | 0.25 (n=4) | 0.25 (n=4) | **0.38** (n=4) | 0.25 (n=4)     |
-| **Overall**         | **0.40**   | **0.40**   | **0.65**       | **0.70**       |
+| Category            | RAG (v5)   | RAG (v4)   | Graph (v5) | Graph (v4) |
+| ------------------- | ---------- | ---------- | ---------- | ---------- |
+| `one_hop`           | 0.80 (n=5) | 0.80 (n=5) | 0.80 (n=5) | 0.80 (n=5) |
+| `multi_hop_2`       | 0.00 (n=5) | 0.10 (n=5) | 0.60 (n=5) | **0.90** (n=5) |
+| `multi_hop_3`       | 0.25 (n=4) | 0.25 (n=4) | 0.75 (n=4) | 0.75 (n=4) |
+| `dependency_chain`  | 0.75 (n=4) | 0.75 (n=4) | **1.00** (n=4) | 0.38 (n=4) |
+| `shared_neighbor`   | 0.75 (n=4) | 0.88 (n=4) | **1.00** (n=4) | **1.00** (n=4) |
+| `aggregation_count` | 0.00 (n=4) | 0.00 (n=4) | 0.50 (n=4) | 0.50 (n=4) |
+| `negation`          | 0.25 (n=4) | 0.38 (n=4) | 0.25 (n=4) | 0.50 (n=4) |
+| **Overall**         | **0.40**   | **0.45**   | **0.70**   | **0.70**   |
 
-Net per-cell motion (graph): two wins (`negation +0.13`, the
-lever-1 target; `multi_hop_2 +0.30`, the v5-quota recovery), four
-losses concentrated in n=4 cells (`dependency_chain -0.25`,
-`multi_hop_3 -0.25`, `aggregation_count -0.13`, `one_hop -0.20`),
-one flat (`shared_neighbor`). §8 attributes each cell-level move to
-specific gold rows; the headline arithmetic conceals two distinct
-mechanisms: (a) the lever-1 target row gold-008 cleanly flipped
-correct, and (b) the agent over-applied `set_difference` to two
-non-negation rows (gold-021, gold-026) and a third (gold-018) hit
-the step cap, accounting for ~0.10 of the headline drop. The
-remaining ~0.05 falls inside the n=4/n=5 noise floor (gold-012
-swap, gold-029 set partial → wrong, etc.). Crucially the v5 quota
-artifact is gone in this run: `gold-004` and `gold-015` (both v5
-RateLimitError) ran cleanly to correct + partial respectively, and
-`gold-008` (the third v5 quota fail) is the negation lever-1 win.
-The headline graph score is now interpretable without quota
-caveats.
+Net per-cell motion (graph): one large clean win
+(`dependency_chain +0.62`, four-of-four), two losses
+(`multi_hop_2 -0.30`, `negation -0.25`), four flat. The dependency-
+chain win is the strongest single-iteration cell improvement in the
+project's history — gold-019's alias-mismatch failure (the v4
+post-mortem's lead example) closes cleanly; gold-010 also flips. The
+two losses are partially confounded by an OpenAI-quota artifact (see
+§7.4): four graph rows mid-run returned `RateLimitError` and were
+tagged `agent_miss` despite the underlying logic being unimpaired.
+Removing those four rows would push graph overall toward
+~0.78 — the headline 0.70 is a conservative read.
 
 ### 3.2 Latency
 
-| Agent | mean (s, v6) | p95 (s, v6) | mean (s, v5) | p95 (s, v5) |
+| Agent | mean (s, v5) | p95 (s, v5) | mean (s, v4) | p95 (s, v4) |
 | ----- | ------------ | ----------- | ------------ | ----------- |
-| RAG   | 9.84         | 16.71       | 8.90         | 17.66       |
-| Graph | 11.87        | 27.95       | 8.49         | 19.61       |
+| RAG   | 8.90         | 17.66       | 9.57         | 21.77       |
+| Graph | 8.49         | 19.61       | 9.64         | 28.49       |
 
-Graph latency is up ~3.4s mean / ~8.3s p95 vs v5. Two drivers: (a)
-the v5 run had 4 rate-limited rows that returned in <2s and pulled
-the mean down artificially; without those four rows v5 mean would
-have been ~9.7s, so v6 is up only ~2.2s vs the like-for-like v5 mean,
-mostly attributable to the longer negation tool-chains
-(`set_difference` requires the agent to write two queries instead of
-one). (b) Two graph rows hit the recursion ceiling (gold-018 at 51s,
-gold-028 at 39s) — both burned tool budget on confused
-`set_difference` retries. p95 is dragged by these two specifically;
-median (not shown) is unchanged.
+Both agents got slightly faster. Graph p95 is down ~9s vs v4: the
+zero-match short-circuit kills the worst-case `reach` loops earlier,
+and the 4 quota'd rows return in <2s instead of running to step-cap.
+Mean is dominated by the rate-limit retries near the end of the run
+(visible as growing per-question latency from question 17 onwards in
+the trace).
 
 ### 3.3 Qualitative patterns
 
-* **Factual grounding (1-hop).** Graph 0.60 (v5: 0.80). gold-001,
-  gold-003, gold-011 still correct in 1–2 tool calls. gold-002 is
-  the persistent `extraction_miss`. The new wrong row is **gold-012**
-  ("which cache does the Auth Service use?"): the agent picked the
-  `CACHES` rel and answered with the cache *contents* (auth tokens,
-  session data) instead of following `USES_DATABASE` to Redis.
-  Single n=5 flip — within run-to-run noise, no v6 mechanism
-  involved.
-* **Composition (2-hop).** Graph 0.90 (v5: 0.60). The two v5 quota
-  fails (`gold-004`, `gold-015`) ran cleanly; gold-004 → correct,
-  gold-015 → partial (right author, wrong team). Cell now matches
-  v4's 0.90.
-* **3-hop.** Graph 0.50 (v5: 0.75). gold-016 (v5 quota fail) ran
-  cleanly but answered Payments Service / Java instead of Auth
-  Service / Python — the v4-era mixed-concept failure mode without
-  the quota mask. **gold-018** flipped from v5 correct to v6 step-cap
-  refusal: 19 tool calls without converging on Bob Martinez's role.
-* **Transitive / dependency-chaining.** Graph 0.75 (v5: 1.00). The
-  three v5 wins held (gold-010, gold-019, gold-020). The new failure
-  is **gold-021** ("which services use Redis for caching?") — this
-  is not a NOT-question, but the agent invoked `set_difference`
-  twice and convinced itself the answer was "no services". A
-  routing failure of the new tool, not a regression of any prior
-  mechanism.
-* **Negation / set difference.** Graph **0.38** (v5: 0.25). The
-  lever-1 target gold-008 cleanly flipped to correct (5 tool calls,
-  one `set_difference` invocation, returned PII Service + GraphQL
-  Service exactly). gold-030 lifted from wrong → partial (2 of 4
-  expected services named). gold-028 and gold-029 still wrong —
-  in both the agent invoked `set_difference` but populated the
-  candidate or exclude Cypher with bad rel-type unions and was
-  unable to recover.
-* **Shared neighbours.** Graph 1.00, held.
-* **Aggregation / count.** Graph 0.38 (v5: 0.50). The new oracle
-  enumeration shows the extraction supports the gold answer in full
-  on every cell row (9/9 teams, 6/6 Python services, 3/3 integrations
-  for Fraud Detection Service). gold-007 still correct. **gold-026**
-  flipped from "wrong (5 of 6)" to "wrong (no services found)" —
-  the agent over-applied `set_difference` here too, set up an
-  exclude that swallowed all candidates, and answered "none".
-  gold-025 still partial (8 not 9), gold-027 still partial. The
-  cell mean drop is the gold-026 set_difference misuse alone.
+* **Factual grounding (1-hop).** Both agents 0.80, unchanged. The
+  Payments Service language fact (`gold-002`) remains the only graph
+  `extraction_miss`. Tool-call counts dropped to 1.4/q on graph (was
+  3.0/q in v3, 5.0/q in v4) — alias unioning means a single
+  `neighbourhood` call returns enough; no follow-up probes needed.
+* **Composition (2-hop).** Graph 0.60, but two of the three "wrong"
+  rows are quota-driven (`gold-004`, `gold-015` returned
+  `RateLimitError`). Of the rows that completed cleanly the agent was
+  3/3.
+* **3-hop.** Graph 0.75; gold-016 quota-fail is the entire delta vs a
+  4/4 sweep. The decomposition prompt routing did not get to fire on
+  its primary target row.
+* **Transitive / dependency-chaining.** Graph **1.00** (n=4), all four
+  rows correct. gold-019 (which v3 and v4 both got wrong via
+  rel-type-substitution then alias-mismatch) closes cleanly: the
+  agent calls `reach('Payments Service', 'rely', incoming)`, the alias
+  union folds in `service-payments-service`, and the right answer
+  emerges in one tool call (3.6s). gold-010 also flips correct.
+* **Negation / set difference.** Graph 0.25 (regression from v4's
+  0.50). One row is gold-008's quota fail; gold-028, 029, 030 are
+  real failures showing negation remains the hardest category. The
+  partial answers contain the right exclude set but mishandle the
+  positive set (e.g. gold-028 says "Auth Service has no Python
+  implementation" — wrong, it's the GraphQL Service that's missing
+  Python). Negation is the only cell where v5's tool changes
+  haven't moved the needle.
+* **Shared neighbours.** Graph 1.00, unchanged from v4's clean cell.
+* **Aggregation / count.** Graph 0.50, unchanged. gold-025 (count of
+  teams) was a partial enumerating 5 of 9 teams; gold-027 a partial
+  giving the right number without the entity names. Count tasks need
+  a different intervention (likely a "count then enumerate"
+  scratchpad recipe).
 
 ## 4. Discussion
 
-The overall **0.65 vs. 0.40** gap (n=30) is directionally consistent
-across all six iterations (v1 0.70/0.40 on n=10, v2 0.70/0.45,
-v3 0.72/0.47, v4 0.70/0.45, v5 0.70/0.40, v6 0.65/0.40): graph
-retrieval wins on compositional and counted structure by a consistent
-~0.25–0.30 absolute margin. The headline graph score has lived in the
-narrow band [0.65, 0.72] across four substantive behaviour-changing
-iterations and one diagnostic-only one. Per-cell composition rotates
-each iteration — v6 is the run where `negation` finally moved off its
-v5 floor (0.25 → 0.38) on its lever-1 target, but the same lever's
-over-triggering cost the headline ~0.10 in collateral on
-`dependency_chain` and `aggregation_count`. The pattern that emerges
-across six iterations is now unambiguous: every behaviour-changing
-intervention buys a clean win on a specific row and pays for it
-elsewhere within the n=4 noise floor. Three qualifiers matter:
+The overall **0.70 vs. 0.40** gap (n=30) is directionally consistent
+across all five iterations (v1 0.70/0.40 on n=10, v2 0.70/0.45,
+v3 0.72/0.47, v4 0.70/0.45, v5 0.70/0.40): graph retrieval wins on
+compositional and counted structure by a consistent ~0.25–0.30
+absolute margin. Across iterations the per-cell composition has
+shifted considerably even with the overall margin near-constant — v5
+is the iteration where `dependency_chain` finally crossed from the
+graph agent's *worst* category (0.38 in v4) to its *best* (1.00),
+while `negation` declined to be the new floor. Three qualifiers matter:
 
 1. **Extraction recall is the graph agent's ceiling.** KGGen still misses
    lines that are obvious in Markdown (`gold-002`). We do not patch the graph by
@@ -728,185 +623,27 @@ big move is the inside-cell rotation in `dependency_chain`.
   (`{"warning": "...", "suggested_action": "decompose"}`) so the
   agent treats it as an instruction rather than commentary.
 
-## 8. v6 levers and outcomes
-
-### 8.1 Lever 1 — `set_difference` negation guard rail
-
-`set_difference(candidate_cypher, exclude_cypher, key='name')` runs
-both queries read-only, computes the candidate-set minus exclude-set,
-and returns the diff with both source-set sizes and the overlap
-visible in one tool-call output. The recipe — already present in
-v5's prompt as prose — is now code-enforced. A per-thread cap of 3
-calls prevents the v4-style cap-and-loop pathology (the agent will
-otherwise iterate on minor query rewrites instead of switching
-tactics when a candidate or exclude set comes back wrong).
-
-**Adoption.** The tool fired on **16 calls across 8 of 30 graph
-rows**: 4 of 4 negation rows (gold-008, gold-028, gold-029,
-gold-030), 2 aggregation rows (gold-025, gold-026), 1 dependency
-row (gold-021), and 1 shared_neighbor row (gold-024). The negation
-adoption is full; the cross-cell adoption is the over-triggering
-problem documented in §8.2 below.
-
-**Effect on the headline target cell.** Negation **0.25 → 0.38**.
-The clean win is **gold-008** ("which Platform-managed services do
-NOT depend on Data Lineage Service?") — v5 wrong (it was a quota
-fail), v6 correct in 5 tool calls / 11.1s. The agent's Cypher:
-
-```cypher
-candidate: MATCH (:Entity {name: 'Platform Team'})-[:MANAGES]->(s:Entity)
-           RETURN s.name AS name
-exclude:   MATCH (s:Entity)-[:DEPENDS_ON|RELIES_ON|...]->(:Entity {name:
-           'Data Lineage Service'}) RETURN s.name AS name
-```
-
-Tool returned `set_difference: 3 candidates - 1 excluded (overlap)
-= 2 in result` with PII Service + GraphQL Service named — exactly
-the gold answer. **gold-030** also lifted from wrong to partial
-(2 of 4 expected services correctly named).
-
-**The two negation rows that didn't lift** (gold-028, gold-029)
-both invoked `set_difference` 3× and 1× respectively but populated
-the candidate or exclude Cypher with a malformed rel-type union.
-On gold-028 the agent searched for the Python-implementation edge
-on Auth Service and PII Service individually rather than via the
-full rel-type IN-clause, got back "no results", and concluded all
-three Platform-managed services lack Python implementation
-(opposite of the truth). The set_difference tool surfaces the
-intermediate sets correctly — the agent just disregarded the
-"excluded (0)" warning that the diagnostic block prints when
-the exclude set is empty.
-
-### 8.2 The over-triggering problem
-
-The v6 prompt wires `set_difference` as the negation few-shot's
-preferred path, but the question-shape trigger for "use this tool"
-is too broad in practice. Two collateral regressions:
-
-* **gold-021** ("which services use Redis for caching?") — this is
-  a positive set-membership question, no negation. The agent
-  invoked `set_difference('use Redis', 'use Redis differently')`
-  twice, got an empty result, and answered "no services use
-  Redis" — flipping a v5 known-correct answer to wrong. Cost:
-  one row in `dependency_chain` (-0.25 on the cell).
-* **gold-026** ("how many distinct services have code in Python?")
-  — an aggregation, no negation. The agent set up `candidate=all
-  services` and `exclude=services with Python edges`, returning
-  the *complement* of the right answer ("0 services in Python").
-  Cost: one row in `aggregation_count` (-0.13 on the cell).
-
-Together these explain ~0.10 of the headline 0.70 → 0.65 drop.
-Mechanism diagnosis is unambiguous because the
-`set_difference_calls` instrumentation logs the misuse explicitly:
-both rows show 1–3 `set_difference` invocations in the trace.
-v7 should restrict the prompt's `set_difference` recommendation
-to questions whose surface form contains "NOT" / "do not" /
-"are not" / "without" / "except", with an explicit don't-use list
-covering "use", "depend on", "how many".
-
-### 8.3 Lever 2 — oracle enumeration for aggregation rows
-
-Every aggregate seed-Cypher in the gold YAML uses
-`RETURN count(...) AS count, collect(...) AS names`. v6's oracle
-extracts the `collect()` column into `OracleResult.enumeration`,
-and the report surfaces it as `**Oracle enumeration (N):** name1,
-name2, ...` alongside the existing oracle row count.
-
-The v5 §7.6 question this was designed to answer was: "is gold-025
-('how many teams') a hidden `extraction_miss` — does KGGen only
-extract 5 of 9 teams as Team entities — or is it a genuine
-`agent_miss`?" The v6 enumeration **falsifies the extraction-bound
-hypothesis cleanly** for all three aggregation rows that have
-oracles:
-
-| Row | Oracle enumeration | Agent answer |
-| --- | --- | --- |
-| `gold-025` | 9 teams (all 9 expected) | "8 teams, not fully enumerated" |
-| `gold-026` | 6 services (all 6 expected) | "0 services in Python" |
-| `gold-027` | 3 entities (all 3 expected) | "3 entities, not named" |
-
-In every case the extraction has the full answer — the agent's
-shortfall is reasoning-bound. This collapses the v5 §7.6
-suggestion of a `count_and_enumerate(pattern)` tool to a simpler
-intervention: a prompt rule that for `count` questions the agent
-must enumerate the matched names before stating the count, plus a
-tool that returns both columns by default. v7 work; not done in
-v6 because the diagnostic was the priority.
-
-### 8.4 Failure attribution shift
-
-Across n=30 graph rows: **18 agent_ok, 11 agent_miss, 1
-extraction_miss** (v5: 19/10/1, v4: 20/9/1, v3: 19/10/1). The
-extraction_miss remains gold-002. Cell-level rotation:
-`negation` 0/4/0 → **1/3/0** (gold-008 lever-1 win),
-`multi_hop_2` 3/2/0 → **4/1/0** (the v5 quota fails recovered),
-`dependency_chain` 4/0/0 → 3/1/0 (gold-021 set_difference misuse),
-`aggregation_count` 1/3/0 → 1/3/0 (gold-026 misuse offset by no
-new wins), `multi_hop_3` 3/1/0 → 2/2/0 (gold-018 step-cap fail),
-`one_hop` 4/0/1 → 3/1/1 (gold-012 noise flip),
-`shared_neighbor` 4/0/0 unchanged. Net attribution drift -1/+1/0
-is inside run-to-run noise; the v6-attributable moves are the
-gold-008 win and the two `set_difference` misuses.
-
-### 8.5 What v7 should change
-
-* **Restrict `set_difference` routing.** The mechanism works (gold-008
-  is the proof), but the prompt allows the model to apply it to
-  questions that don't fit. The fix is a tighter trigger: require
-  one of {NOT, do not, are not, without, except} in the question
-  before the few-shot is even shown, and add an explicit
-  don't-use list covering "use", "depend on", "how many".
-* **Repair gold-028 / gold-029.** Both invoked `set_difference` but
-  the exclude Cypher returned nothing because the agent used
-  per-source single-spelling MATCH instead of the
-  `WHERE type(r) IN [...]` union. The tool already prints
-  "(empty result is suspicious: exclude set is empty, ...)" but
-  the agent disregarded it. v7 could promote that line to an
-  explicit error that requires a follow-up `find_rel_types_like`
-  before allowing another `set_difference` call.
-* **Aggregation fix.** Replace the `count_and_enumerate` tool
-  proposal with a prompt rule "for any question starting with
-  'how many', enumerate the matched entities by name before stating
-  the count" plus a `run_cypher` post-process that auto-adds
-  `, collect(name)` when only `count(...)` is in the RETURN.
-* **Don't keep iterating headline scores.** v6 confirms what v3-v5
-  already suggested: the headline graph score is in a [0.65, 0.72]
-  band determined more by which n=4 cells flip on a given run than
-  by lever quality. The cell-by-cell attribution chain (v3 oracle
-  status + v5 alias counter + v6 enumeration + v6 set_difference
-  counter) is now complete enough to write up the project as-is.
-  v7 makes sense as a final cleanup pass for the negation cell
-  (clearing gold-028 / gold-029 with the routing fix above) and
-  then the project should pivot from iteration-and-eval into a
-  written paper.
-
-## 9. Conclusion
+## 8. Conclusion
 
 Holding extraction *effort* constant — both sides fully automated
 from the same Markdown — a text-to-Cypher graph agent still
-outperforms chunk-RAG on this benchmark overall (0.65 vs. 0.40 in
-v6, ~0.30 absolute margin held across all six iterations). v6
-delivers the negation lever-1 win on its target row (gold-008) via
-a code-enforced `set_difference` tool, paradigm-symmetric to v4's
-`reach`: prose recipe → guard-rail tool. The same iteration also
-shows the recurring iteration-vs-noise pattern — the new tool's
-prompt routing was too broad, costing the headline ~0.10 in
-collateral on two non-negation rows where the model misapplied
-the diff. The most informative scientific finding is the
-diagnostic, not the score: oracle enumeration falsifies the
-suspicion that aggregation_count failures might be hidden
-extraction misses (the graph supports the gold answer in full on
-9/9 teams, 6/6 Python services, 3/3 Fraud Detection integrations),
-which means every remaining failure across the negation and
-aggregation cells is reasoning-bound and in principle agent-side
-recoverable. v6 attribution holds at 18/11/1 — the diagnostic
-chain (v3 oracle status + v5 alias counter + v6 enumeration + v6
-set_difference counter) is now complete enough that any v7 lever
-will be evaluable cell-by-cell against a stable diagnostic
-baseline. The project is at the regime where individual cell
-flips dominate headline movement; further iteration past v7's
-narrow scope (negation routing fix + aggregation enumeration
-prompt) would be paid for by another cell elsewhere.
+outperforms chunk-RAG on this benchmark overall (0.70 vs. 0.40 in
+v5), with the advantage visible on multi-hop structure and now,
+finally, on transitive `dependency_chain` queries (0.38 → 1.00
+after lever 1). v5's tool-level alias unioning is the project's
+single highest-value lever to date in terms of failures cleared
+(four `dependency_chain` rows clean up; the v3/v4 lead failure
+mode dissolves) without any change to the KGGen graph or the agent
+surface area. The headline overall score is statistically flat vs
+v4 (0.70 vs 0.70) but the cell shape is genuinely different and
+two of the apparent regressions (`multi_hop_2`, half of `negation`)
+are confounded by an OpenAI rate-limit artifact mid-run. The
+remaining hard cell is `negation`, which has been
+reasoning-bound across every iteration and likely needs a
+purpose-built `set_difference` tool to clear, paradigm-symmetric
+to how `reach` upgraded the transitive recipe in v4. v5 attribution
+holds at 19/10/1; the diagnostic split lets v6 work focus on
+negation and aggregation without re-litigating the alias question.
 
 ## References
 

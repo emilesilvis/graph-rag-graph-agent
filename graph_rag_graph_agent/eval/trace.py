@@ -25,6 +25,16 @@ RECURSION_LIMIT_MARKER = "Sorry, need more steps to process this request."
 _ROW_COUNT_RE = re.compile(r"\((\d+)\s+rows?\)")
 _NOTE_LINE_RE = re.compile(r"^NOTE:.*$", re.MULTILINE)
 _OUTPUT_PREVIEW_CHARS = 240
+# v5: detect when an alias-aware tool (reach / neighbourhood / resolve_entity)
+# folded sibling spellings into the result. The signal is one of three
+# distinct phrases the tools emit; count any tool output that contained
+# at least one as an "alias-folded call".
+_ALIAS_SIGNAL_RE = re.compile(r"aliases unioned:|aliases of '")
+# v6: detect when the agent invoked the `set_difference` negation guard
+# rail and got a populated diff back (rather than an error). Symmetric
+# to the alias signal above; lets the report quantify lever-1 adoption
+# for v6 the way v5 quantifies it for alias unioning.
+_SET_DIFF_SIGNAL_RE = re.compile(r"^set_difference:", re.MULTILINE)
 
 
 @dataclass
@@ -52,6 +62,17 @@ class AgentTraceSummary:
     find_rel_types_like_calls: dict[str, bool]
     hit_recursion_limit: bool
     step_at_first_relevant_match: int | None
+    # v5 instrumentation: count tool outputs where alias siblings were
+    # folded in (reach / neighbourhood / resolve_entity emit a marker
+    # line when more than one node-name spelling contributed). Lets the
+    # report show "lever 1 fired N times" alongside the find_rel_types_like
+    # coverage count.
+    aliases_used_calls: int = 0
+    # v6 instrumentation: count tool outputs from the `set_difference`
+    # negation guard rail (lever 1 in v6). Includes both successful and
+    # error outputs - the marker fires on every non-cap-error invocation -
+    # so the report can show adoption per question.
+    set_difference_calls: int = 0
 
 
 def _summarise_args(args: Any) -> str:
@@ -166,6 +187,8 @@ def extract_trace(
     find_rel_types_like_args: list[str] = []
     step_at_first_relevant_match: int | None = None
     hit_recursion_limit = False
+    aliases_used_calls = 0
+    set_difference_calls = 0
 
     tool_index = 0
     for msg in messages:
@@ -217,6 +240,14 @@ def extract_trace(
                 if isinstance(concept_arg, str) and concept_arg:
                     find_rel_types_like_args.append(concept_arg)
 
+            if info["name"] in ("reach", "neighbourhood", "resolve_entity") and (
+                _ALIAS_SIGNAL_RE.search(output)
+            ):
+                aliases_used_calls += 1
+
+            if info["name"] == "set_difference" and _SET_DIFF_SIGNAL_RE.search(output):
+                set_difference_calls += 1
+
             if step_at_first_relevant_match is None and _expected_entity_appears(
                 output, expected_entities
             ):
@@ -236,6 +267,8 @@ def extract_trace(
         find_rel_types_like_calls=find_rel_types_like_calls,
         hit_recursion_limit=hit_recursion_limit,
         step_at_first_relevant_match=step_at_first_relevant_match,
+        aliases_used_calls=aliases_used_calls,
+        set_difference_calls=set_difference_calls,
     )
 
 

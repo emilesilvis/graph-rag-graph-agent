@@ -36,6 +36,14 @@ class OracleResult:
     row_count: int
     error: str | None
     has_oracle: bool
+    # v6: when the oracle Cypher RETURNs a `collect(...)` column the result
+    # row contains a list of names. We surface that list here so the
+    # report can show the extraction's enumeration of an aggregate
+    # question's expected answer (e.g. gold-025 "how many teams" -
+    # oracle returns `count, collect(t.name) AS teams`). This makes
+    # extraction-vs-agent ambiguity in aggregation rows visible without
+    # re-running the seed by hand.
+    enumeration: list[str] | None = None
 
 
 def run_oracle(cypher: str, config: Config | None = None) -> OracleResult:
@@ -60,12 +68,37 @@ def run_oracle(cypher: str, config: Config | None = None) -> OracleResult:
             error=f"{type(exc).__name__}: {exc}",
             has_oracle=True,
         )
+    enumeration = _extract_enumeration(rows)
     return OracleResult(
         cypher=cypher,
         row_count=len(rows),
         error=None,
         has_oracle=True,
+        enumeration=enumeration,
     )
+
+
+def _extract_enumeration(rows: list) -> list[str] | None:
+    """If the oracle returned a list-typed column (e.g. `collect(t.name)`),
+    surface it as a sorted list of names.
+
+    Returns None if no list column is present (the common case for non-
+    aggregation oracles, where rows are simply enumerated). For aggregate
+    seeds the list is the extraction's actual enumeration of the answer
+    set, which the report shows alongside the gold's `expected_entities`
+    so any extraction shortfall (e.g. KGGen extracted 5 of 9 teams) is
+    visible without re-running the seed by hand.
+    """
+    if not rows:
+        return None
+    for row in rows:
+        for key in row.keys():
+            value = row[key]
+            if isinstance(value, list):
+                names = [str(v) for v in value if v is not None]
+                if names:
+                    return sorted(set(names))
+    return None
 
 
 def attribute_status(
