@@ -97,6 +97,13 @@ the report.
 - [`uv`](https://docs.astral.sh/uv/) — all package management
 - A running Neo4j instance reachable from your machine
 - An OpenAI API key
+- A Java Runtime Environment (`java` on `$PATH`) — required by the
+  HermiT reasoner that the v9 ontology paradigm runs at build time and
+  per-question for `check_consistency`. Owlready2 ships HermiT itself,
+  so no manual reasoner install. If `java` is not available, the
+  ontology pipeline falls back to the asserted (un-classified)
+  ontology and `check_consistency` reports inconsistencies as caught
+  errors rather than blocking the build.
 
 ## Setup
 
@@ -115,6 +122,8 @@ No code edits required — everything configurable via env vars in `.env`:
 | `GRAPH_CYPHER_PATH` | `$KNOWLEDGE_DIR/graph.cypher` | Cypher file loaded into Neo4j |
 | `CHROMA_DIR` | `./.chroma` | Where to persist the vector store |
 | `CHROMA_COLLECTION` | `knowledge-corpus` | Collection name |
+| `PAGEINDEX_TREE_PATH` | `$KNOWLEDGE_DIR/pageindex_tree.json` | Persisted PageIndex tree (built by `build-pageindex`) |
+| `ONTOLOGY_OWL_PATH` | `$KNOWLEDGE_DIR/ontology.owl` | Persisted OWL ontology (built by `build-ontology`) |
 | `DOMAIN_DESCRIPTION` | *(unset)* | One-line flavor injected symmetrically into both agents' persona |
 | `EVAL_ENTITY_BLOCKLIST` | *(unset)* | Comma-separated exact names to exclude from question seeds |
 
@@ -127,11 +136,17 @@ uv run python main.py ingest-rag
 # 2. Load the graph into Neo4j (wipes the DB by default, re-run is safe)
 uv run python main.py load-graph
 
-# 3. Generate the eval set (samples the graph, LLM-synthesises questions)
+# 3. Build the PageIndex tree-of-contents from the markdown
+uv run python main.py build-pageindex
+
+# 4. Build the OWL ontology + run HermiT classification (v9; needs java)
+uv run python main.py build-ontology
+
+# 5. Generate the eval set (samples the graph, LLM-synthesises questions)
 uv run python main.py generate-eval --n 25
 #    -> writes graph_rag_graph_agent/eval/questions.yaml; review by hand
 
-# 4. Run both agents and produce a markdown report
+# 6. Run all agents and produce a markdown report
 uv run python main.py eval
 #    -> eval_runs/<run_id>.json + eval_report.md
 
@@ -145,9 +160,12 @@ uv run python main.py eval --agent rag --limit 5
 # To promote a run + paper into a versioned snapshot for Git, see
 # "Iteration snapshots" below (new-iteration).
 
-# Spot-check either agent interactively
+# Spot-check any agent interactively
 uv run python main.py chat --agent rag
 uv run python main.py chat --agent graph
+uv run python main.py chat --agent pageindex
+uv run python main.py chat --agent router
+uv run python main.py chat --agent ontology
 ```
 
 ## How the eval pipeline works

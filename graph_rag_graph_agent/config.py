@@ -33,6 +33,9 @@ CHROMA_DIR = _path_env("CHROMA_DIR", PROJECT_ROOT / ".chroma")
 PAGEINDEX_TREE_PATH = _path_env(
     "PAGEINDEX_TREE_PATH", KNOWLEDGE_DIR / "pageindex_tree.json"
 )
+ONTOLOGY_OWL_PATH = _path_env(
+    "ONTOLOGY_OWL_PATH", KNOWLEDGE_DIR / "ontology.owl"
+)
 
 EVAL_DIR = PROJECT_ROOT / "graph_rag_graph_agent" / "eval"
 EVAL_QUESTIONS_PATH = EVAL_DIR / "questions.yaml"

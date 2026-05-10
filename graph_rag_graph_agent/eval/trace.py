@@ -48,6 +48,11 @@ _ROUTER_TOOL_TO_PARADIGM = {
     "ask_graph": "graph",
     "ask_pageindex": "pageindex",
 }
+# v9: ontology agent's two paradigm-native tools (`sparql_query` and
+# `check_consistency`). Paradigm-symmetric to v7's
+# `_PAGEINDEX_SECTION_TOOL` and v6's `_SET_DIFF_SIGNAL_RE`.
+_ONTOLOGY_SPARQL_TOOL = "sparql_query"
+_ONTOLOGY_CONSISTENCY_TOOL = "check_consistency"
 
 
 @dataclass
@@ -99,6 +104,13 @@ class AgentTraceSummary:
     # call any sub-agent, e.g. a refusal or scratchpad-only turn).
     router_calls: dict[str, int] = field(default_factory=dict)
     router_primary: str | None = None
+    # v9 instrumentation: ontology-agent SPARQL + HermiT consistency
+    # counts. Paradigm-symmetric to `pageindex_section_calls` (v7),
+    # `set_difference_calls` (v6), and `aliases_used_calls` (v5) - lets
+    # the report quantify how often the symbolic-reasoning paradigm
+    # actually invoked its native levers.
+    ontology_sparql_calls: int = 0
+    ontology_consistency_calls: int = 0
 
 
 def _summarise_args(args: Any) -> str:
@@ -218,6 +230,8 @@ def extract_trace(
     pageindex_section_calls = 0
     router_calls: dict[str, int] = {"rag": 0, "graph": 0, "pageindex": 0}
     router_primary: str | None = None
+    ontology_sparql_calls = 0
+    ontology_consistency_calls = 0
 
     tool_index = 0
     for msg in messages:
@@ -280,6 +294,11 @@ def extract_trace(
             if info["name"] == _PAGEINDEX_SECTION_TOOL:
                 pageindex_section_calls += 1
 
+            if info["name"] == _ONTOLOGY_SPARQL_TOOL:
+                ontology_sparql_calls += 1
+            if info["name"] == _ONTOLOGY_CONSISTENCY_TOOL:
+                ontology_consistency_calls += 1
+
             paradigm = _ROUTER_TOOL_TO_PARADIGM.get(info["name"])
             if paradigm is not None:
                 router_calls[paradigm] += 1
@@ -310,6 +329,8 @@ def extract_trace(
         pageindex_section_calls=pageindex_section_calls,
         router_calls=router_calls,
         router_primary=router_primary,
+        ontology_sparql_calls=ontology_sparql_calls,
+        ontology_consistency_calls=ontology_consistency_calls,
     )
 
 

@@ -16,6 +16,10 @@ from tqdm import tqdm
 
 from graph_rag_graph_agent.agents.memory import reset_scratchpad
 from graph_rag_graph_agent.agents.graph_agent import GraphAgent
+from graph_rag_graph_agent.agents.ontology_agent import (
+    OntologyAgent,
+    reset_consistency_state,
+)
 from graph_rag_graph_agent.agents.pageindex_agent import PageIndexAgent
 from graph_rag_graph_agent.agents.rag_agent import RAGAgent
 from graph_rag_graph_agent.agents.router_agent import RouterAgent
@@ -40,7 +44,7 @@ from graph_rag_graph_agent.eval.trace import (
 
 console = Console()
 
-AgentName = Literal["rag", "graph", "pageindex", "router"]
+AgentName = Literal["rag", "graph", "pageindex", "router", "ontology"]
 
 
 @dataclass
@@ -73,6 +77,10 @@ class TurnResult:
     pageindex_section_calls: int = 0
     router_calls: dict[str, int] = field(default_factory=dict)
     router_primary: str | None = None
+    # v9 instrumentation: ontology-paradigm tool counters,
+    # paradigm-symmetric to v7's `pageindex_section_calls`.
+    ontology_sparql_calls: int = 0
+    ontology_consistency_calls: int = 0
     trace: dict[str, Any] = field(default_factory=dict)
 
 
@@ -104,13 +112,18 @@ def run_eval(
         f"({len(questions)} questions x {len(agents)} agents)"
     )
 
-    runners: dict[AgentName, RAGAgent | GraphAgent | PageIndexAgent | RouterAgent] = {}
+    runners: dict[
+        AgentName,
+        RAGAgent | GraphAgent | PageIndexAgent | RouterAgent | OntologyAgent,
+    ] = {}
     if "rag" in agents:
         runners["rag"] = RAGAgent(config)
     if "graph" in agents:
         runners["graph"] = GraphAgent(config)
     if "pageindex" in agents:
         runners["pageindex"] = PageIndexAgent(config)
+    if "ontology" in agents:
+        runners["ontology"] = OntologyAgent(config)
     if "router" in agents:
         # Router needs all three sub-agents. Reuse already-built ones if
         # present so we don't double-pay the (cheap but non-zero) init
@@ -156,6 +169,7 @@ def run_eval(
             thread_id = f"{run_id}-{agent_name}-{q.id}"
             reset_scratchpad(thread_id)
             reset_reach_state(thread_id)
+            reset_consistency_state(thread_id)
             runner = runners[agent_name]
             start = time.perf_counter()
             error: str | None = None
@@ -224,6 +238,8 @@ def run_eval(
                     pageindex_section_calls=trace.pageindex_section_calls,
                     router_calls=dict(trace.router_calls),
                     router_primary=trace.router_primary,
+                    ontology_sparql_calls=trace.ontology_sparql_calls,
+                    ontology_consistency_calls=trace.ontology_consistency_calls,
                     trace=trace_to_dict(trace),
                 )
             )

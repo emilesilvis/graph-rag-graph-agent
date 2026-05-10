@@ -266,6 +266,42 @@ def write_report(
             lines.append(f"| `{qid}` | {cat} | {n} |")
         lines.append("")
 
+    # --- ontology adoption (ontology only, v9) -----------------------------
+    onto_rows: list[tuple[str, str, int, int]] = []
+    for r in results:
+        if r["agent"] != "ontology":
+            continue
+        n_sparql = int(r.get("ontology_sparql_calls", 0) or 0)
+        n_check = int(r.get("ontology_consistency_calls", 0) or 0)
+        if n_sparql or n_check:
+            onto_rows.append((r["question_id"], r["category"], n_sparql, n_check))
+    if onto_rows:
+        total_sparql = sum(s for _, _, s, _ in onto_rows)
+        total_check = sum(c for _, _, _, c in onto_rows)
+        total_onto_rows = sum(1 for r in results if r["agent"] == "ontology")
+        lines.append("## Ontology adoption (v9)")
+        lines.append("")
+        lines.append(
+            "Number of `sparql_query` and `check_consistency` invocations "
+            "per question. Quantifies how the v9 ontology agent split its "
+            "work between SPARQL retrieval and HermiT consistency checks - "
+            "paradigm-symmetric to v7's `get_section_content` adoption "
+            "section, v6's `set_difference` adoption, and v5's "
+            "alias-folded calls."
+        )
+        lines.append("")
+        lines.append(
+            f"Total tool calls across all questions: "
+            f"**sparql={total_sparql}, check_consistency={total_check}** "
+            f"(touched {len(onto_rows)} of {total_onto_rows} ontology rows)."
+        )
+        lines.append("")
+        lines.append("| Question | Category | sparql calls | check_consistency calls |")
+        lines.append("| --- | --- | --- | --- |")
+        for qid, cat, n_sparql, n_check in onto_rows:
+            lines.append(f"| `{qid}` | {cat} | {n_sparql} | {n_check} |")
+        lines.append("")
+
     # --- router paradigm selection (router only, v8) -----------------------
     router_rows: list[tuple[str, str, dict[str, int], str | None]] = []
     for r in results:

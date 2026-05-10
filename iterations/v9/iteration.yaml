@@ -1,0 +1,20 @@
+id: v9
+created_at: 2026-05-10T07:33:57Z
+parent: v8
+run_id: 20260505T180001Z-8a19f8
+agents:
+  - rag
+  - graph
+  - pageindex
+  - router
+  - ontology
+question_count: 30
+summary: "Add fifth variant: OWL ontology + HermiT (OntologyAgent). Headline 0.78/0.75/0.63/0.42/0.02 (router/graph/pageindex/rag/ontology) — ontology paradigm collapses at the floor, extraction-bound rather than reasoning-bound."
+changes:
+  - "OntologyAgent: LangGraph ReAct agent with get_ontology_summary/sparql_query/check_consistency tools over an Owlready2-loaded OWL world. Recursion cap 24. check_consistency capped at 3 calls/question. Same BASE_PERSONA + scratchpad + ask/ask_with_trace shape as other agents."
+  - "graph_rag_graph_agent/ontology/build.py + store.py: single-shot LLM JSON-schema extraction (gpt-4o-mini), Owlready2 materialisation, sync_reasoner_hermit() classification, RDF/XML persistence to ONTOLOGY_OWL_PATH. Build cost ~80s end-to-end. Yields 7 classes / 7 object properties / 31 individuals / 24 assertions / 0 disjointness pairs / 0 inconsistent classes on this corpus."
+  - "eval/run.py + eval/trace.py: AgentName extended to 'ontology'; new ontology_sparql_calls/ontology_consistency_calls fields on TurnResult/AgentTraceSummary; sparql_query and check_consistency tool names recognised in extract_trace."
+  - "eval/report.py: new 'Ontology adoption (v9)' section with per-question SPARQL + consistency call counts."
+  - "main.py: --agent accepts ontology; both/all expand to 5 agents; chat subcommand gains ontology branch; new build-ontology Typer command symmetric to build-pageindex."
+  - "owlready2 >=0.46 added to pyproject.toml; README documents JRE prerequisite for HermiT and ONTOLOGY_OWL_PATH env var."
+  - "RAGAgent / GraphAgent / PageIndexAgent / RouterAgent held fixed at v8 behaviour."

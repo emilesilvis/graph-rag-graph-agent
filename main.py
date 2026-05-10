@@ -74,6 +74,26 @@ def build_pageindex(
     build_tree(rebuild=rebuild, add_summaries=summaries)
 
 
+@app.command("build-ontology")
+def build_ontology_cmd(
+    rebuild: bool = typer.Option(
+        True,
+        "--rebuild/--no-rebuild",
+        help="If true (default), regenerate the OWL ontology even if one exists.",
+    ),
+) -> None:
+    """Build the OWL ontology from knowledge_sources/*.md (v9).
+
+    Concatenates the corpus, asks the agent LLM for a typed schema
+    (classes, object properties, individuals, assertions, disjointness),
+    materialises it via Owlready2, runs HermiT once at build time, and
+    persists as RDF/XML at `ONTOLOGY_OWL_PATH` (plus a JSON sidecar).
+    """
+    from graph_rag_graph_agent.ontology.build import build_ontology
+
+    build_ontology(rebuild=rebuild)
+
+
 @app.command("generate-eval")
 def generate_eval(
     n: int = typer.Option(25, "--n", help="Approximate total number of questions."),
@@ -90,8 +110,8 @@ def eval_cmd(
     agent: str = typer.Option(
         "both",
         "--agent",
-        help="Which agent(s) to run: rag | graph | pageindex | router | both | all. "
-        "'both' is retained as an alias for 'all' (= rag, graph, pageindex, router) "
+        help="Which agent(s) to run: rag | graph | pageindex | router | ontology | both | all. "
+        "'both' is retained as an alias for 'all' (= rag, graph, pageindex, router, ontology) "
         "for backwards compatibility with v6 scripts.",
     ),
     limit: Optional[int] = typer.Option(
@@ -111,12 +131,12 @@ def eval_cmd(
 
     agent_choice = agent.lower().strip()
     if agent_choice in {"both", "all"}:
-        agents = ["rag", "graph", "pageindex", "router"]
-    elif agent_choice in {"rag", "graph", "pageindex", "router"}:
+        agents = ["rag", "graph", "pageindex", "router", "ontology"]
+    elif agent_choice in {"rag", "graph", "pageindex", "router", "ontology"}:
         agents = [agent_choice]  # type: ignore[list-item]
     else:
         raise typer.BadParameter(
-            "--agent must be one of rag | graph | pageindex | router | both | all"
+            "--agent must be one of rag | graph | pageindex | router | ontology | both | all"
         )
 
     questions = load_questions(questions_path)
@@ -157,8 +177,15 @@ def chat(
 
         runner = RouterAgent()
         label = "Router agent"
+    elif agent_choice == "ontology":
+        from graph_rag_graph_agent.agents.ontology_agent import OntologyAgent
+
+        runner = OntologyAgent()
+        label = "Ontology agent"
     else:
-        raise typer.BadParameter("--agent must be rag | graph | pageindex | router")
+        raise typer.BadParameter(
+            "--agent must be rag | graph | pageindex | router | ontology"
+        )
 
     thread_id = "chat-session"
     console.print(
